@@ -341,20 +341,40 @@ function buildHistoryTable(entries) {
   const recent = entries.slice(-10).reverse();
   const table = document.createElement('table');
   table.className = 'history-table';
-  table.innerHTML = '<thead><tr><th>Date/Time</th><th>Session %</th><th>Weekly %</th></tr></thead>';
+  const thead = document.createElement('thead');
+  const headerRow = document.createElement('tr');
+  const th1 = document.createElement('th');
+  th1.textContent = 'Date/Time';
+  const th2 = document.createElement('th');
+  th2.textContent = 'Session %';
+  const th3 = document.createElement('th');
+  th3.textContent = 'Weekly %';
+  headerRow.appendChild(th1);
+  headerRow.appendChild(th2);
+  headerRow.appendChild(th3);
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
   const tbody = document.createElement('tbody');
   recent.forEach(function(e) {
     const d = new Date(e.ts);
     const tr = document.createElement('tr');
-    tr.innerHTML =
-      '<td>' + d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) + '</td>' +
-      '<td>' + (e.sessionPct != null ? fmt(e.sessionPct) + '%' : '—') + '</td>' +
-      '<td>' + (e.weeklyPct != null ? fmt(e.weeklyPct) + '%' : '—') + '</td>';
+    const tdDate = document.createElement('td');
+    tdDate.textContent = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    const tdSession = document.createElement('td');
+    tdSession.textContent = e.sessionPct != null ? fmt(e.sessionPct) + '%' : '—';
+    const tdWeekly = document.createElement('td');
+    tdWeekly.textContent = e.weeklyPct != null ? fmt(e.weeklyPct) + '%' : '—';
+    tr.appendChild(tdDate);
+    tr.appendChild(tdSession);
+    tr.appendChild(tdWeekly);
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
   return table;
 }
+
+let _fileInput = null;
 
 function buildHistoryButtons() {
   const row = document.createElement('div');
@@ -365,22 +385,25 @@ function buildHistoryButtons() {
   exportBtn.className = 'btn-history';
   exportBtn.addEventListener('click', exportJSON);
 
-  const fileInput = document.createElement('input');
-  fileInput.type = 'file';
-  fileInput.accept = '.json';
-  fileInput.style.display = 'none';
-  fileInput.addEventListener('change', function() {
-    if (!fileInput.files[0]) return;
-    importJSON(fileInput.files[0]).then(function(merged) {
-      renderHistory(merged);
+  if (!_fileInput) {
+    _fileInput = document.createElement('input');
+    _fileInput.type = 'file';
+    _fileInput.accept = '.json';
+    _fileInput.style.display = 'none';
+    _fileInput.addEventListener('change', function() {
+      if (!_fileInput.files[0]) return;
+      importJSON(_fileInput.files[0]).then(function(merged) {
+        renderHistory(merged);
+      });
+      _fileInput.value = '';
     });
-    fileInput.value = '';
-  });
+    document.body.appendChild(_fileInput);
+  }
 
   const importBtn = document.createElement('button');
   importBtn.textContent = 'Import JSON';
   importBtn.className = 'btn-history';
-  importBtn.addEventListener('click', function() { fileInput.click(); });
+  importBtn.addEventListener('click', function() { _fileInput.click(); });
 
   const clearBtn = document.createElement('button');
   clearBtn.textContent = 'Clear history';
@@ -394,7 +417,6 @@ function buildHistoryButtons() {
 
   row.appendChild(exportBtn);
   row.appendChild(importBtn);
-  row.appendChild(fileInput);
   row.appendChild(clearBtn);
   return row;
 }
