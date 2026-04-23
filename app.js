@@ -1,6 +1,4 @@
 const CONFIG = {
-  SESSION_WINDOW_HOURS: 5,
-  WEEKLY_WINDOW_HOURS: 168,
   DEBOUNCE_MS: 300
 };
 
@@ -36,7 +34,7 @@ function run() {
         renderHistory(loadHistory());
       }
     } catch (err) {
-      errorEl.textContent = err;
+      errorEl.textContent = err instanceof Error ? err.message : String(err);
     }
   }, CONFIG.DEBOUNCE_MS);
 }
@@ -86,7 +84,16 @@ document.addEventListener('DOMContentLoaded', function() {
   const last = loadLastInput();
   if (last) {
     textarea.value = last;
-    run();
+    try {
+      const parsed = parseUsageText(last);
+      if (parsed.errors.length) errorEl.textContent = parsed.errors.join('\n');
+      renderResults(parsed);
+      renderSuggestion(parsed);
+      if (parsed.session || parsed.weekly) renderHistory(loadHistory());
+    } catch (err) {
+      errorEl.textContent = err instanceof Error ? err.message : String(err);
+    }
+  } else {
+    renderHistory(loadHistory());
   }
-  renderHistory(loadHistory());
 });
