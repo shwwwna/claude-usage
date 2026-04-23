@@ -4,7 +4,8 @@ const MAX_ENTRIES = 200;
 
 function loadHistory() {
   try {
-    return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    const entries = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    return entries.sort(function(a, b) { return a.ts - b.ts; });
   } catch { return []; }
 }
 

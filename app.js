@@ -1,13 +1,3 @@
-const SAMPLE = [
-  'Current session',
-  'Resets in 1 hr 30 min',
-  '74% used',
-  'Weekly limits',
-  'All models',
-  'Resets Fri 5:59 AM',
-  '65% used',
-].join('\n');
-
 const textarea = document.getElementById('input');
 const errorEl  = document.getElementById('error');
 
@@ -30,11 +20,6 @@ function run() {
 
 textarea.addEventListener('input', run);
 
-document.getElementById('btn-sample').addEventListener('click', function() {
-  textarea.value = SAMPLE;
-  run();
-});
-
 document.getElementById('btn-clear').addEventListener('click', function() {
   textarea.value = '';
   errorEl.textContent = '';
@@ -43,7 +28,7 @@ document.getElementById('btn-clear').addEventListener('click', function() {
 
 document.getElementById('btn-open-usage').addEventListener('click', function() {
   if (navigator.windowControlsOverlay) {
-    window.open('https://claude.ai/settings/usage', 'claude-usage-window', 'popup');
+    window.open('https://claude.ai/settings/usage', 'claude-usage-window', 'popup,width=800,height=600');
   } else {
     window.open('https://claude.ai/settings/usage', '_blank');
   }
