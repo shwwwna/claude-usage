@@ -17,16 +17,15 @@
 <div class="input-area">
   <textarea id="input" placeholder="Paste usage text from claude.ai/settings/usage&#10;&#10;Example:&#10;Current session&#10;Resets in 1 hr 30 min&#10;74% used&#10;&#10;Weekly limits&#10;All models&#10;Resets Fri 5:59 AM&#10;65% used"></textarea>
   <div class="btn-row">
+    <button id="btn-open-usage">⬡ Open Claude Usage</button>
     <button id="btn-sample">Sample Data</button>
     <button id="btn-clear">Clear</button>
-  </div>
-  <div class="bookmarklet-row">
-    <a class="bookmarklet-link" href="javascript:window.open('https://claude.ai/settings/usage','_blank')">⬡ Claude Usage</a>
-    <span class="bookmarklet-hint">Drag to bookmarks bar → click to open usage page</span>
   </div>
 </div>
 
 <div id="error"></div>
+
+<div id="suggestion"></div>
 
 <div class="pacing-controls">
   <div class="pacing-row">
@@ -38,6 +37,47 @@
     <label for="weekly-exponent">Weekly pacing:</label>
     <input type="range" id="weekly-exponent" min="0" max="1" step="0.01" value="0.65">
     <span id="weekly-exponent-label">Front-loaded</span>
+  </div>
+</div>
+
+<div class="pacing-tips">
+  <div class="tips-grid">
+    <div class="tip-card">
+      <div class="tip-level">Aggressive</div>
+      <div class="tip-description">Use most of your quota early</div>
+      <ul class="tip-list">
+        <li>Heavy usage planned for today/early in the week</li>
+        <li>Need fast iteration on urgent work</li>
+        <li>Know you'll have lighter usage later</li>
+      </ul>
+    </div>
+    <div class="tip-card">
+      <div class="tip-level">Front-loaded</div>
+      <div class="tip-description">Slightly skew toward early usage</div>
+      <ul class="tip-list">
+        <li>Plan to work more early, taper off later</li>
+        <li>Natural daily/weekly rhythm with productivity peaks</li>
+        <li>Most common for balanced workflows (default)</li>
+      </ul>
+    </div>
+    <div class="tip-card">
+      <div class="tip-level">Slight Push</div>
+      <div class="tip-description">Nearly even, slight preference for later</div>
+      <ul class="tip-list">
+        <li>Want flexibility and steady usage throughout</li>
+        <li>No strong pattern of high or low periods</li>
+        <li>Prefer not to rush early on</li>
+      </ul>
+    </div>
+    <div class="tip-card">
+      <div class="tip-level">Conservative</div>
+      <div class="tip-description">Spread usage evenly across the period</div>
+      <ul class="tip-list">
+        <li>Uncertain about upcoming workload</li>
+        <li>Want maximum flexibility in usage timing</li>
+        <li>Prefer to save quota for later just in case</li>
+      </ul>
+    </div>
   </div>
 </div>
 

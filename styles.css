@@ -246,22 +246,136 @@ button:hover { background: #3a3a3e; color: #fff; }
   text-decoration: line-through;
 }
 
-.bookmarklet-row {
+#btn-open-usage {
+  border-color: #6366f1;
+  color: #a5b4fc;
+}
+#btn-open-usage:hover { background: #6366f1; color: #fff; }
+
+.pacing-tips {
+  width: 100%;
+  max-width: 960px;
+  margin-top: 1rem;
+}
+
+.tips-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+.tip-card {
+  background: linear-gradient(135deg, #1c1c1f 0%, #252529 100%);
+  border: 1px solid #2a2a2e;
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.tip-level {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #a5b4fc;
+  text-transform: capitalize;
+  letter-spacing: 0.05em;
+}
+
+.tip-description {
+  font-size: 0.75rem;
+  color: #888;
+  font-style: italic;
+}
+
+.tip-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+  color: #999;
+}
+
+.tip-list li::before {
+  content: "→ ";
+  color: #6366f1;
+  font-weight: 600;
+  margin-right: 0.3rem;
+}
+
+.tip-list li {
+  line-height: 1.4;
+}
+
+#suggestion {
+  width: 100%;
+  max-width: 960px;
+  min-height: auto;
+}
+
+.suggestion-section {
+  background: linear-gradient(135deg, #1e3a1f 0%, #1c2a1f 100%);
+  border: 1px solid #2d5a2d;
+  border-radius: 10px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.suggestion-heading {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #86efac;
+}
+
+.suggestion-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.suggestion-item {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-.bookmarklet-link {
-  display: inline-block;
-  padding: 0.45rem 1rem;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 0.8rem;
+  background: rgba(134, 239, 172, 0.05);
   border-radius: 6px;
-  border: 1px solid #6366f1;
-  background: #1c1c1f;
-  color: #a5b4fc;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-  font-family: inherit;
 }
-.bookmarklet-link:hover { background: #6366f1; color: #fff; }
+
+.suggestion-item.suggestion-update {
+  background: rgba(134, 239, 172, 0.1);
+  border: 1px solid rgba(134, 239, 172, 0.2);
+}
+
+.suggestion-label {
+  font-size: 0.8rem;
+  color: #aaa;
+}
+
+.suggestion-value {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #86efac;
+  text-transform: capitalize;
+}
+
+.suggestion-btn {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.7rem;
+  background: #2d5a2d;
+  border-color: #3d7a3d;
+  color: #86efac;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.suggestion-btn:hover {
+  background: #3d7a3d;
+  color: #fff;
+}

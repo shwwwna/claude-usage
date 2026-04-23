@@ -12,3 +12,13 @@ function computeStats(totalHours, hoursLeft, actualPct, exponent) {
 
   return { targetPct, diff, status };
 }
+
+function suggestPacing(actualPct) {
+  const diff = actualPct - 50;
+
+  if (actualPct > 85) return 0.3;
+  if (actualPct > 75) return 0.45;
+  if (actualPct > 60) return 0.55;
+  if (actualPct > 45) return 0.65;
+  return 0.8;
+}

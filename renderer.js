@@ -193,3 +193,71 @@ function renderClock() {
 }
 
 function fmt(n) { return n.toFixed(1); }
+
+function renderSuggestion(parsed) {
+  const container = document.getElementById('suggestion');
+  container.innerHTML = '';
+
+  const suggestions = [];
+  if (parsed.session) suggestions.push({
+    key: 'session-exponent',
+    type: 'Session',
+    actualPct: parsed.session.actualPct
+  });
+  if (parsed.weekly) suggestions.push({
+    key: 'weekly-exponent',
+    type: 'Weekly',
+    actualPct: parsed.weekly.actualPct
+  });
+
+  if (!suggestions.length) return;
+
+  const section = document.createElement('div');
+  section.className = 'suggestion-section';
+
+  const heading = document.createElement('div');
+  heading.className = 'suggestion-heading';
+  heading.innerHTML = '💡 Suggested Pacing';
+  section.appendChild(heading);
+
+  const items = document.createElement('div');
+  items.className = 'suggestion-items';
+
+  suggestions.forEach(function(s) {
+    const suggested = suggestPacing(s.actualPct);
+    const current = s.key === 'session-exponent' ? sessionExponent : weeklyExponent;
+    const shouldUpdate = Math.abs(suggested - current) > 0.05;
+
+    const item = document.createElement('div');
+    item.className = 'suggestion-item' + (shouldUpdate ? ' suggestion-update' : '');
+
+    const label = document.createElement('span');
+    label.className = 'suggestion-label';
+    label.textContent = s.type + ' (' + fmt(s.actualPct) + '% used)';
+
+    const value = document.createElement('span');
+    value.className = 'suggestion-value';
+    value.textContent = exponentToLabel(suggested).charAt(0).toUpperCase() + exponentToLabel(suggested).slice(1);
+
+    const btn = document.createElement('button');
+    btn.className = 'suggestion-btn';
+    btn.textContent = 'Apply';
+    btn.addEventListener('click', function() {
+      const slider = document.getElementById(s.key);
+      slider.value = suggested.toFixed(2);
+      if (s.key === 'session-exponent') sessionExponent = suggested;
+      else weeklyExponent = suggested;
+      document.getElementById(s.key + '-label').textContent = exponentToLabel(suggested);
+      run();
+    });
+
+    item.appendChild(label);
+    item.appendChild(value);
+    if (shouldUpdate) item.appendChild(btn);
+
+    items.appendChild(item);
+  });
+
+  section.appendChild(items);
+  container.appendChild(section);
+}

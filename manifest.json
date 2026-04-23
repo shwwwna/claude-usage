@@ -24,5 +24,19 @@
       "sizes": "512x512",
       "type": "image/png"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Claude Usage Page",
+      "short_name": "Usage",
+      "description": "Open Claude API usage page",
+      "url": "https://claude.ai/settings/usage",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
   ]
 }

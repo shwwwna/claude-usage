@@ -15,12 +15,14 @@ function run() {
   const raw = textarea.value;
   errorEl.textContent = '';
   document.getElementById('results').innerHTML = '';
+  document.getElementById('suggestion').innerHTML = '';
   if (!raw.trim()) return;
 
   try {
     const parsed = parseUsageText(raw);
     if (parsed.errors.length) errorEl.textContent = parsed.errors.join('\n');
     renderResults(parsed);
+    renderSuggestion(parsed);
   } catch (err) {
     errorEl.textContent = err;
   }
@@ -37,6 +39,14 @@ document.getElementById('btn-clear').addEventListener('click', function() {
   textarea.value = '';
   errorEl.textContent = '';
   document.getElementById('results').innerHTML = '';
+});
+
+document.getElementById('btn-open-usage').addEventListener('click', function() {
+  if (navigator.windowControlsOverlay) {
+    window.open('https://claude.ai/settings/usage', 'claude-usage-window', 'popup');
+  } else {
+    window.open('https://claude.ai/settings/usage', '_blank');
+  }
 });
 
 function exponentToLabel(v) {
