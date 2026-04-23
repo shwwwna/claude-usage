@@ -35,7 +35,9 @@ function exportJSON() {
   const a = document.createElement('a');
   a.href = url;
   a.download = 'claude-usage-history.json';
+  document.body.appendChild(a);
   a.click();
+  document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
 
@@ -55,6 +57,7 @@ function importJSON(file) {
         resolve(merged);
       } catch { reject('Parse error'); }
     };
+    reader.onerror = function() { reject('Read error'); };
     reader.readAsText(file);
   });
 }
