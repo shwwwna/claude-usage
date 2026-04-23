@@ -27,6 +27,20 @@
 </div>
 
 <div id="error"></div>
+
+<div class="pacing-controls">
+  <div class="pacing-row">
+    <label for="session-exponent">Session pacing:</label>
+    <input type="range" id="session-exponent" min="0" max="1" step="0.01" value="0.55">
+    <span id="session-exponent-label">Front-loaded</span>
+  </div>
+  <div class="pacing-row">
+    <label for="weekly-exponent">Weekly pacing:</label>
+    <input type="range" id="weekly-exponent" min="0" max="1" step="0.01" value="0.65">
+    <span id="weekly-exponent-label">Front-loaded</span>
+  </div>
+</div>
+
 <div class="results" id="results"></div>
 
 <script src="parser.js"></script>
