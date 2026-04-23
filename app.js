@@ -1,21 +1,44 @@
+const CONFIG = {
+  SESSION_WINDOW_HOURS: 5,
+  WEEKLY_WINDOW_HOURS: 168,
+  DEBOUNCE_MS: 300
+};
+
 const textarea = document.getElementById('input');
 const errorEl  = document.getElementById('error');
 
-function run() {
-  const raw = textarea.value;
-  errorEl.textContent = '';
-  document.getElementById('results').innerHTML = '';
-  document.getElementById('suggestion').innerHTML = '';
-  if (!raw.trim()) return;
+let debounceTimer;
 
-  try {
-    const parsed = parseUsageText(raw);
-    if (parsed.errors.length) errorEl.textContent = parsed.errors.join('\n');
-    renderResults(parsed);
-    renderSuggestion(parsed);
-  } catch (err) {
-    errorEl.textContent = err;
-  }
+function run() {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(function() {
+    const raw = textarea.value;
+    errorEl.textContent = '';
+    document.getElementById('results').innerHTML = '';
+    document.getElementById('suggestion').innerHTML = '';
+    if (!raw.trim()) return;
+
+    try {
+      const parsed = parseUsageText(raw);
+      if (parsed.errors.length) errorEl.textContent = parsed.errors.join('\n');
+      renderResults(parsed);
+      renderSuggestion(parsed);
+
+      if (parsed.session || parsed.weekly) {
+        saveEntry({
+          ts: Date.now(),
+          sessionPct: parsed.session ? parsed.session.actualPct : null,
+          weeklyPct: parsed.weekly ? parsed.weekly.actualPct : null,
+          sessionHoursLeft: parsed.session ? parsed.session.hoursLeft : null,
+          weeklyHoursLeft: parsed.weekly ? parsed.weekly.hoursLeft : null
+        });
+        saveLastInput(raw);
+        renderHistory(loadHistory());
+      }
+    } catch (err) {
+      errorEl.textContent = err;
+    }
+  }, CONFIG.DEBOUNCE_MS);
 }
 
 textarea.addEventListener('input', run);
@@ -24,6 +47,8 @@ document.getElementById('btn-clear').addEventListener('click', function() {
   textarea.value = '';
   errorEl.textContent = '';
   document.getElementById('results').innerHTML = '';
+  document.getElementById('suggestion').innerHTML = '';
+  renderHistory(loadHistory());
 });
 
 document.getElementById('btn-open-usage').addEventListener('click', function() {
@@ -53,9 +78,15 @@ function exponentToLabel(v) {
   });
 });
 
-renderClock();
-setInterval(renderClock, 1000);
-
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js');
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+  const last = loadLastInput();
+  if (last) {
+    textarea.value = last;
+    run();
+  }
+  renderHistory(loadHistory());
+});
