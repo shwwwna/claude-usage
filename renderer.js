@@ -179,19 +179,6 @@ function buildLegend(totalHours, hoursLeft) {
   return legend;
 }
 
-function renderClock() {
-  const el = document.getElementById('live-clock');
-  if (!el) return;
-  const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const d = new Date();
-  const h = d.getHours();
-  const min = d.getMinutes();
-  const ampm = h >= 12 ? 'pm' : 'am';
-  const h12 = h % 12 || 12;
-  const mm = min < 10 ? '0' + min : min;
-  el.innerHTML = '<div class="clock-day">' + DAYS[d.getDay()] + '</div><div class="clock-time">' + h12 + ':' + mm + ampm + '</div>';
-}
-
 function fmt(n) { return n.toFixed(1); }
 
 function renderSuggestion(parsed) {
@@ -260,4 +247,154 @@ function renderSuggestion(parsed) {
 
   section.appendChild(items);
   container.appendChild(section);
+}
+
+function renderHistory(entries) {
+  const container = document.getElementById('history-panel');
+  if (!container) return;
+  container.innerHTML = '';
+  if (!entries.length) {
+    container.innerHTML = '<p class="history-empty">No history yet. Paste usage data above to start tracking.</p>';
+    return;
+  }
+
+  const details = document.createElement('details');
+  const summary = document.createElement('summary');
+  summary.className = 'history-summary';
+  summary.textContent = 'Usage History';
+  details.appendChild(summary);
+
+  const analysis = analyzeHistory(entries);
+  const analysisEl = document.createElement('div');
+  analysisEl.className = 'history-analysis';
+
+  const parts = [];
+  if (analysis.sessionAvg7d != null) parts.push('session ' + fmt(analysis.sessionAvg7d) + '% (' + analysis.sessionTrend + ')');
+  if (analysis.weeklyAvg7d != null) parts.push('weekly ' + fmt(analysis.weeklyAvg7d) + '% (' + analysis.weeklyTrend + ')');
+  analysisEl.textContent = parts.length ? '7-day avg: ' + parts.join(', ') : '';
+  details.appendChild(analysisEl);
+
+  details.appendChild(buildChart(entries));
+  details.appendChild(buildHistoryTable(entries));
+  details.appendChild(buildHistoryButtons());
+
+  container.appendChild(details);
+}
+
+function buildChart(entries) {
+  const W = 400, H = 120, PAD = 10;
+  const plotW = W - PAD * 2;
+  const plotH = H - PAD * 2;
+
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  svg.setAttribute('class', 'history-chart');
+
+  const minTs = entries[0].ts;
+  const maxTs = entries[entries.length - 1].ts;
+  const tsRange = maxTs - minTs || 1;
+
+  function toX(ts) { return PAD + ((ts - minTs) / tsRange) * plotW; }
+  function toY(pct) { return PAD + (1 - pct / 100) * plotH; }
+
+  function makeLine(key, cls) {
+    const points = entries
+      .filter(function(e) { return e[key] != null; })
+      .map(function(e) { return toX(e.ts) + ',' + toY(e[key]); })
+      .join(' ');
+    if (!points) return;
+    const poly = document.createElementNS(ns, 'polyline');
+    poly.setAttribute('points', points);
+    poly.setAttribute('class', cls);
+    svg.appendChild(poly);
+
+    entries.filter(function(e) { return e[key] != null; }).forEach(function(e) {
+      const circle = document.createElementNS(ns, 'circle');
+      circle.setAttribute('cx', toX(e.ts));
+      circle.setAttribute('cy', toY(e[key]));
+      circle.setAttribute('r', '3');
+      circle.setAttribute('class', cls + '-dot');
+      svg.appendChild(circle);
+    });
+  }
+
+  makeLine('sessionPct', 'chart-session');
+  makeLine('weeklyPct', 'chart-weekly');
+
+  const dateWrap = document.createElement('div');
+  dateWrap.className = 'chart-dates';
+  const d1 = new Date(minTs);
+  const d2 = new Date(maxTs);
+  dateWrap.innerHTML =
+    '<span>' + d1.toLocaleDateString() + '</span>' +
+    '<span>' + d2.toLocaleDateString() + '</span>';
+
+  const wrap = document.createElement('div');
+  wrap.className = 'chart-wrap';
+  wrap.appendChild(svg);
+  wrap.appendChild(dateWrap);
+  return wrap;
+}
+
+function buildHistoryTable(entries) {
+  const recent = entries.slice(-10).reverse();
+  const table = document.createElement('table');
+  table.className = 'history-table';
+  table.innerHTML = '<thead><tr><th>Date/Time</th><th>Session %</th><th>Weekly %</th></tr></thead>';
+  const tbody = document.createElement('tbody');
+  recent.forEach(function(e) {
+    const d = new Date(e.ts);
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td>' + d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) + '</td>' +
+      '<td>' + (e.sessionPct != null ? fmt(e.sessionPct) + '%' : '—') + '</td>' +
+      '<td>' + (e.weeklyPct != null ? fmt(e.weeklyPct) + '%' : '—') + '</td>';
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  return table;
+}
+
+function buildHistoryButtons() {
+  const row = document.createElement('div');
+  row.className = 'history-btn-row';
+
+  const exportBtn = document.createElement('button');
+  exportBtn.textContent = 'Export JSON';
+  exportBtn.className = 'btn-history';
+  exportBtn.addEventListener('click', exportJSON);
+
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = '.json';
+  fileInput.style.display = 'none';
+  fileInput.addEventListener('change', function() {
+    if (!fileInput.files[0]) return;
+    importJSON(fileInput.files[0]).then(function(merged) {
+      renderHistory(merged);
+    });
+    fileInput.value = '';
+  });
+
+  const importBtn = document.createElement('button');
+  importBtn.textContent = 'Import JSON';
+  importBtn.className = 'btn-history';
+  importBtn.addEventListener('click', function() { fileInput.click(); });
+
+  const clearBtn = document.createElement('button');
+  clearBtn.textContent = 'Clear history';
+  clearBtn.className = 'btn-history btn-history-clear';
+  clearBtn.addEventListener('click', function() {
+    if (confirm('Clear all history? This can\'t be undone.')) {
+      clearHistory();
+      renderHistory([]);
+    }
+  });
+
+  row.appendChild(exportBtn);
+  row.appendChild(importBtn);
+  row.appendChild(fileInput);
+  row.appendChild(clearBtn);
+  return row;
 }
