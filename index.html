@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude Usage Tracker</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="styles.css">
+<meta name="theme-color" content="#0f0f11">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Claude Usage">
+</head>
+<body>
+<h1>Claude Usage Tracker</h1>
+
+<div class="input-area">
+  <textarea id="input" placeholder="Paste usage text from claude.ai/settings/usage&#10;&#10;Example:&#10;Current session&#10;Resets in 1 hr 30 min&#10;74% used&#10;&#10;Weekly limits&#10;All models&#10;Resets Fri 5:59 AM&#10;65% used"></textarea>
+  <div class="btn-row">
+    <button id="btn-sample">Sample Data</button>
+    <button id="btn-clear">Clear</button>
+  </div>
+  <div class="bookmarklet-row">
+    <a class="bookmarklet-link" href="javascript:window.open('https://claude.ai/settings/usage','_blank')">⬡ Claude Usage</a>
+    <span class="bookmarklet-hint">Drag to bookmarks bar → click to open usage page</span>
+  </div>
+</div>
+
+<div id="error"></div>
+<div class="results" id="results"></div>
+
+<script src="parser.js"></script>
+<script src="stats.js"></script>
+<script src="renderer.js"></script>
+<script src="app.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+</script>
+</body>
+</html>

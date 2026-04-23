@@ -1,0 +1,28 @@
+{
+  "name": "Claude Usage Tracker",
+  "short_name": "Claude Usage",
+  "description": "Track Claude API usage against session and weekly limits",
+  "start_url": "/claude-usage/",
+  "scope": "/claude-usage/",
+  "display": "standalone",
+  "background_color": "#0f0f11",
+  "theme_color": "#0f0f11",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
