@@ -18,11 +18,14 @@
   <textarea id="input" placeholder="Paste usage text from claude.ai/settings/usage&#10;&#10;Example:&#10;Current session&#10;Resets in 1 hr 30 min&#10;74% used&#10;&#10;Weekly limits&#10;All models&#10;Resets Fri 5:59 AM&#10;65% used"></textarea>
   <div class="btn-row">
     <button id="btn-open-usage">⬡ Open Claude Usage</button>
+    <button id="btn-paste">Paste</button>
     <button id="btn-clear">Clear</button>
   </div>
 </div>
 
 <div id="error"></div>
+
+<div class="results" id="results"></div>
 
 <div id="suggestion"></div>
 
@@ -80,7 +83,6 @@
   </div>
 </div>
 
-<div class="results" id="results"></div>
 <div id="history-panel"></div>
 
 <script src="parser.js"></script>

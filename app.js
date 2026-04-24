@@ -57,6 +57,14 @@ document.getElementById('btn-open-usage').addEventListener('click', function() {
   }
 });
 
+document.getElementById('btn-paste').addEventListener('click', function() {
+  navigator.clipboard.readText().then(function(text) {
+    textarea.value = text;
+    run();
+  }).catch(function() {
+  });
+});
+
 function exponentToLabel(v) {
   if (v <= 0.5)  return 'aggressive';
   if (v <= 0.65) return 'front-loaded';

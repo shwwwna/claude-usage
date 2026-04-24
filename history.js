@@ -11,6 +11,12 @@ function loadHistory() {
 
 function saveEntry(entry) {
   const history = loadHistory();
+  const last = history[history.length - 1];
+  if (last &&
+      last.sessionPct === entry.sessionPct &&
+      last.weeklyPct === entry.weeklyPct &&
+      last.sessionHoursLeft === entry.sessionHoursLeft &&
+      last.weeklyHoursLeft === entry.weeklyHoursLeft) return;
   history.push(entry);
   if (history.length > MAX_ENTRIES) history.splice(0, history.length - MAX_ENTRIES);
   localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
