@@ -379,3 +379,113 @@ button:hover { background: #3a3a3e; color: #fff; }
   background: #3d7a3d;
   color: #fff;
 }
+
+/* History panel */
+#history-panel { margin-top: 1.5rem; }
+
+.history-empty {
+  color: #888;
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.history-summary {
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #a5b4fc;
+  padding: 0.5rem 0;
+  user-select: none;
+}
+
+.history-analysis {
+  font-size: 0.8rem;
+  color: #888;
+  margin-bottom: 0.75rem;
+}
+
+/* Chart */
+.chart-wrap { margin-bottom: 1rem; }
+
+.history-chart {
+  width: 100%;
+  display: block;
+  background: #1c1c1f;
+  border-radius: 6px;
+}
+
+.chart-session {
+  fill: none;
+  stroke: #6366f1;
+  stroke-width: 1.5;
+}
+
+.chart-session-dot { fill: #6366f1; }
+
+.chart-weekly {
+  fill: none;
+  stroke: #86efac;
+  stroke-width: 1.5;
+}
+
+.chart-weekly-dot { fill: #86efac; }
+
+.chart-dates {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: #555;
+  margin-top: 0.2rem;
+}
+
+/* History table */
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  font-family: monospace;
+  margin-bottom: 0.75rem;
+}
+
+.history-table th {
+  text-align: left;
+  color: #888;
+  font-weight: normal;
+  padding: 0.2rem 0.5rem 0.4rem 0;
+  border-bottom: 1px solid #2a2a2e;
+}
+
+.history-table td {
+  padding: 0.25rem 0.5rem 0.25rem 0;
+  color: #ccc;
+  border-bottom: 1px solid #1c1c1f;
+}
+
+/* History buttons */
+.history-btn-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+.btn-history {
+  font-size: 0.78rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 4px;
+  border: 1px solid #3a3a3e;
+  background: #1c1c1f;
+  color: #ccc;
+  cursor: pointer;
+}
+
+.btn-history:hover { background: #2a2a2e; }
+
+.btn-history-clear {
+  color: #f87171;
+  border-color: #450a0a;
+  margin-left: auto;
+}
+
+.btn-history-clear:hover { background: #1a0a0a; }
