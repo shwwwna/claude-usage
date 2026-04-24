@@ -21,6 +21,7 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft) {
 
   const card = document.createElement('div');
   card.className = 'card';
+  card.dataset.type = label.toLowerCase();
 
   const title = document.createElement('div');
   title.className = 'card-title';
@@ -43,7 +44,9 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft) {
   card.appendChild(statRow('Resets', resetLabel));
 
   const badgeClass = status === 'over' ? 'badge-over' : status === 'under' ? 'badge-under' : 'badge-on';
-  const badgeText  = status === 'over' ? 'OVER' : status === 'under' ? 'UNDER' : 'ON TARGET';
+  const badgeText  = status === 'over'  ? 'OVER, USE SLOWER'
+                   : status === 'under' ? 'UNDER, USE FASTER'
+                                        : 'ON TARGET, MAINTAIN THE PACE';
   const diffClass  = status === 'over' ? 'diff-over' : status === 'under' ? 'diff-under' : 'diff-on';
   const sign       = diff > 0 ? '+' : '';
 
@@ -61,12 +64,7 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft) {
   statusRow.appendChild(rhs);
   card.appendChild(statusRow);
 
-  const bars = document.createElement('div');
-  bars.className = 'bars';
-  const TICKS = [10, 20, 30, 40, 50, 60, 70, 80, 90];
-  bars.appendChild(buildBar('Actual', actualPct, 'bar-actual' + (status === 'over' ? ' over-target' : '')));
-  bars.appendChild(buildBar('Target', targetPct, 'bar-target', TICKS));
-  card.appendChild(bars);
+  card.appendChild(buildUnifiedBar(actualPct, targetPct, status));
 
   card.appendChild(buildLegend(totalHours, hoursLeft));
 
@@ -87,29 +85,38 @@ function statRow(label, value) {
   return row;
 }
 
-function buildBar(label, pct, fillClass, ticks) {
-  const wrap = document.createElement('div');
-  wrap.className = 'bar-row';
-  const lbl = document.createElement('div');
-  lbl.className = 'bar-label';
-  lbl.textContent = label;
+function buildUnifiedBar(actualPct, targetPct, status) {
+  const clamp = function(n) { return Math.min(100, Math.max(0, n)); };
+  const actualClamped = clamp(actualPct);
+  const targetClamped = clamp(targetPct);
+  const statusClass = 'status-' + status;
+
   const track = document.createElement('div');
-  track.className = 'bar-track';
-  const fill = document.createElement('div');
-  fill.className = 'bar-fill ' + fillClass;
-  fill.style.width = Math.min(100, Math.max(0, pct)) + '%';
-  track.appendChild(fill);
-  if (ticks) {
-    ticks.forEach(function(t) {
-      const tick = document.createElement('div');
-      tick.className = 'bar-tick';
-      tick.style.left = t + '%';
-      track.appendChild(tick);
-    });
-  }
-  wrap.appendChild(lbl);
-  wrap.appendChild(track);
-  return wrap;
+  track.className = 'bar-track unified';
+
+  const targetFill = document.createElement('div');
+  targetFill.className = 'bar-target-fill';
+  targetFill.style.width = targetClamped + '%';
+  track.appendChild(targetFill);
+
+  const actualFill = document.createElement('div');
+  actualFill.className = 'bar-actual-fill ' + statusClass;
+  actualFill.style.width = actualClamped + '%';
+  track.appendChild(actualFill);
+
+  [10, 20, 30, 40, 50, 60, 70, 80, 90].forEach(function(t) {
+    const tick = document.createElement('div');
+    tick.className = 'bar-tick';
+    tick.style.left = t + '%';
+    track.appendChild(tick);
+  });
+
+  const dot = document.createElement('div');
+  dot.className = 'bar-endpoint-dot ' + statusClass;
+  dot.style.left = actualClamped + '%';
+  track.appendChild(dot);
+
+  return track;
 }
 
 function buildLegend(totalHours, hoursLeft) {
@@ -217,6 +224,7 @@ function renderSuggestion(parsed) {
 
     const item = document.createElement('div');
     item.className = 'suggestion-item' + (shouldUpdate ? ' suggestion-update' : '');
+    item.dataset.type = s.type.toLowerCase();
 
     const label = document.createElement('span');
     label.className = 'suggestion-label';

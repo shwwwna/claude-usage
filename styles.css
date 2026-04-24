@@ -94,6 +94,12 @@ button:hover { background: #3a3a3e; color: #fff; }
   gap: 1rem;
 }
 
+body.session-hidden .card[data-type="session"],
+body.session-hidden .pacing-row[data-type="session"],
+body.session-hidden .suggestion-item[data-type="session"] {
+  display: none;
+}
+
 .card {
   background: #1c1c1f;
   border: 1px solid #2a2a2e;
@@ -140,28 +146,51 @@ button:hover { background: #3a3a3e; color: #fff; }
 .diff-under { color: #86efac; }
 .diff-on    { color: #a5b4fc; }
 
-.bars { display: flex; flex-direction: column; gap: 0.5rem; }
-
-.bar-row { display: flex; flex-direction: column; gap: 0.2rem; }
-.bar-label { font-size: 0.7rem; color: #666; }
-
 .bar-track {
   height: 12px;
   background: #2a2a2e;
   border-radius: 4px;
-  overflow: hidden;
   position: relative;
 }
 
-.bar-fill {
+.bar-track.unified { overflow: visible; }
+
+.bar-target-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
   height: 100%;
+  background: #3a3a3e;
   border-radius: 4px;
   transition: width 0.3s ease;
 }
 
-.bar-actual { background: #6366f1; }
-.bar-actual.over-target { background: #ef4444; }
-.bar-target { background: #60a5fa; }
+.bar-actual-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease, background 0.15s;
+}
+.bar-actual-fill.status-under,
+.bar-actual-fill.status-on { background: #22c55e; }
+.bar-actual-fill.status-over { background: #ef4444; }
+
+.bar-endpoint-dot {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 2px rgba(15, 15, 17, 0.9), 0 0 0 3px rgba(255, 255, 255, 0.25);
+  transition: left 0.3s ease, background 0.15s;
+  pointer-events: none;
+}
+.bar-endpoint-dot.status-under,
+.bar-endpoint-dot.status-on { background: #22c55e; }
+.bar-endpoint-dot.status-over { background: #ef4444; }
 
 .bar-tick {
   position: absolute;

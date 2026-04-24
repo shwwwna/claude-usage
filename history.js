@@ -2,21 +2,38 @@ const HISTORY_KEY = 'claude-usage-history';
 const LAST_INPUT_KEY = 'claude-usage-last-input';
 const MAX_ENTRIES = 200;
 
+function dedupKey(e) {
+  return Math.floor(e.ts / 60000) + '|' + e.sessionPct + '|' + e.weeklyPct;
+}
+
+function dedupEntries(entries) {
+  const seen = new Set();
+  const out = [];
+  for (const e of entries) {
+    const k = dedupKey(e);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(e);
+  }
+  return out;
+}
+
 function loadHistory() {
   try {
-    const entries = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
-    return entries.sort(function(a, b) { return a.ts - b.ts; });
+    const raw = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    const sorted = raw.sort(function(a, b) { return a.ts - b.ts; });
+    const deduped = dedupEntries(sorted);
+    if (deduped.length !== raw.length) {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(deduped));
+    }
+    return deduped;
   } catch { return []; }
 }
 
 function saveEntry(entry) {
   const history = loadHistory();
-  const last = history[history.length - 1];
-  if (last &&
-      last.sessionPct === entry.sessionPct &&
-      last.weeklyPct === entry.weeklyPct &&
-      last.sessionHoursLeft === entry.sessionHoursLeft &&
-      last.weeklyHoursLeft === entry.weeklyHoursLeft) return;
+  const keys = new Set(history.map(dedupKey));
+  if (keys.has(dedupKey(entry))) return;
   history.push(entry);
   if (history.length > MAX_ENTRIES) history.splice(0, history.length - MAX_ENTRIES);
   localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
@@ -55,9 +72,7 @@ function importJSON(file) {
         const incoming = JSON.parse(e.target.result);
         if (!Array.isArray(incoming)) return reject('Invalid format');
         const existing = loadHistory();
-        const existingTs = new Set(existing.map(function(x) { return x.ts; }));
-        const merged = existing.concat(incoming.filter(function(x) { return !existingTs.has(x.ts); }));
-        merged.sort(function(a, b) { return a.ts - b.ts; });
+        const merged = dedupEntries(existing.concat(incoming).sort(function(a, b) { return a.ts - b.ts; }));
         if (merged.length > MAX_ENTRIES) merged.splice(0, merged.length - MAX_ENTRIES);
         localStorage.setItem(HISTORY_KEY, JSON.stringify(merged));
         resolve(merged);

@@ -20,6 +20,7 @@
     <button id="btn-open-usage">⬡ Open Claude Usage</button>
     <button id="btn-paste">Paste</button>
     <button id="btn-clear">Clear</button>
+    <button id="btn-toggle-session">Show session calculation</button>
   </div>
 </div>
 
@@ -30,7 +31,7 @@
 <div id="suggestion"></div>
 
 <div class="pacing-controls">
-  <div class="pacing-row">
+  <div class="pacing-row" data-type="session">
     <label for="session-exponent">Session pacing:</label>
     <input type="range" id="session-exponent" min="0" max="1" step="0.01" value="0.55">
     <span id="session-exponent-label">Front-loaded</span>
