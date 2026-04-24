@@ -1,9 +1,11 @@
-const CACHE = 'claude-usage-v1';
+const CACHE = 'claude-usage-v3';
 const ASSETS = [
   '/claude-usage/',
   '/claude-usage/index.html',
   '/claude-usage/manifest.json',
-  '/claude-usage/icon.svg'
+  '/claude-usage/icon.svg',
+  '/claude-usage/alarm.js',
+  '/claude-usage/Recover.mp3'
 ];
 
 self.addEventListener('install', e => {

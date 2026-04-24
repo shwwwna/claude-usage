@@ -160,7 +160,7 @@ body.session-hidden .suggestion-item[data-type="session"] {
   top: 0;
   left: 0;
   height: 100%;
-  background: #6366f1;
+  background: hsla(0, 0%, 100%, 0.4);
   border-radius: 4px;
   transition: width 0.3s ease;
 }
@@ -171,11 +171,24 @@ body.session-hidden .suggestion-item[data-type="session"] {
   left: 0;
   height: 100%;
   border-radius: 4px;
+  mix-blend-mode: screen;
   transition: width 0.3s ease, background 0.15s;
 }
 .bar-actual-fill.status-under,
-.bar-actual-fill.status-on { background: #22c55e; }
-.bar-actual-fill.status-over { background: #ef4444; }
+.bar-actual-fill.status-on { background: rgba(34, 197, 94, 0.7); }
+.bar-actual-fill.status-over { background: rgba(239, 68, 68, 0.75); }
+
+.bar-target-marker {
+  position: absolute;
+  top: -4px;
+  height: 20px;
+  width: 2px;
+  background: #a5b4fc;
+  border-radius: 1px;
+  transform: translateX(-50%);
+  box-shadow: 0 0 3px rgba(165, 180, 252, 0.6);
+  pointer-events: none;
+}
 
 .bar-endpoint-dot {
   position: absolute;
@@ -419,13 +432,11 @@ body.session-hidden .suggestion-item[data-type="session"] {
   padding: 1rem 0;
 }
 
-.history-summary {
-  cursor: pointer;
+.history-title {
   font-size: 0.95rem;
   font-weight: 600;
   color: #a5b4fc;
   padding: 0.5rem 0;
-  user-select: none;
 }
 
 .history-analysis {
@@ -518,3 +529,72 @@ body.session-hidden .suggestion-item[data-type="session"] {
 }
 
 .btn-history-clear:hover { background: #1a0a0a; }
+
+.btn-history-delete {
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  border: 1px solid #3a1f1f;
+  background: transparent;
+  color: #f87171;
+  cursor: pointer;
+  visibility: hidden;
+}
+
+.history-table tbody tr:hover .btn-history-delete { visibility: visible; }
+
+.btn-history-delete:hover { background: #1a0a0a; color: #fca5a5; }
+
+.alarm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: alarm-pulse 1.2s ease-in-out infinite;
+}
+
+.alarm-modal {
+  background: #1c1c1f;
+  border: 2px solid #e14b4b;
+  border-radius: 12px;
+  padding: 2rem 2.5rem;
+  max-width: 90vw;
+  text-align: center;
+  box-shadow: 0 0 60px rgba(225, 75, 75, 0.6);
+}
+
+.alarm-modal-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 0.75rem;
+}
+
+.alarm-modal-body {
+  font-size: 0.95rem;
+  color: #ccc;
+  margin-bottom: 1.5rem;
+}
+
+.alarm-dismiss-btn {
+  padding: 0.75rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  background: #e14b4b;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.alarm-dismiss-btn:hover { background: #f56565; color: #fff; }
+
+@keyframes alarm-pulse {
+  0%, 100% { background: rgba(0, 0, 0, 0.75); }
+  50% { background: rgba(80, 0, 0, 0.85); }
+}

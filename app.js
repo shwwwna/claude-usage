@@ -45,6 +45,11 @@ function run(options) {
       renderResults(parsed);
       renderSuggestion(parsed);
 
+      if (parsed.session) {
+        const resetMs = Date.now() + parsed.session.hoursLeft * 3600 * 1000;
+        scheduleSessionAlarm(resetMs);
+      }
+
       if (parsed.session || parsed.weekly) {
         saveEntry({
           ts: Date.now(),
@@ -100,6 +105,30 @@ document.getElementById('btn-toggle-session').addEventListener('click', function
   setSessionVisible(document.body.classList.contains('session-hidden'));
 });
 
+function updateAlarmButtonLabel() {
+  const btn = document.getElementById('btn-alarm-toggle');
+  if (!btn) return;
+  btn.textContent = isAlarmEnabled() ? '🔔 Alarm: on' : '🔔 Alarm: off';
+}
+
+document.getElementById('btn-alarm-toggle').addEventListener('click', function() {
+  const next = !isAlarmEnabled();
+  setAlarmEnabled(next);
+  updateAlarmButtonLabel();
+  if (next) {
+    try {
+      const raw = textarea.value;
+      if (raw.trim()) {
+        const parsed = parseUsageText(raw);
+        if (parsed.session) {
+          const resetMs = Date.now() + parsed.session.hoursLeft * 3600 * 1000;
+          scheduleSessionAlarm(resetMs);
+        }
+      }
+    } catch (e) {}
+  }
+});
+
 function exponentToLabel(v) {
   if (v <= 0.5)  return 'aggressive';
   if (v <= 0.65) return 'lighter usage later';
@@ -126,6 +155,7 @@ if ('serviceWorker' in navigator) {
 document.addEventListener('DOMContentLoaded', function() {
   const stored = localStorage.getItem(SHOW_SESSION_KEY);
   setSessionVisible(stored === '1');
+  updateAlarmButtonLabel();
 
   const last = loadLastInput();
   if (last) {
@@ -136,6 +166,10 @@ document.addEventListener('DOMContentLoaded', function() {
       applySuggestedPacing(parsed);
       renderResults(parsed);
       renderSuggestion(parsed);
+      if (parsed.session) {
+        const resetMs = Date.now() + parsed.session.hoursLeft * 3600 * 1000;
+        scheduleSessionAlarm(resetMs);
+      }
       if (parsed.session || parsed.weekly) renderHistory(loadHistory());
     } catch (err) {
       errorEl.textContent = err instanceof Error ? err.message : String(err);

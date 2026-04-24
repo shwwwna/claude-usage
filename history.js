@@ -3,19 +3,18 @@ const LAST_INPUT_KEY = 'claude-usage-last-input';
 const MAX_ENTRIES = 200;
 
 function dedupKey(e) {
-  return Math.floor(e.ts / 60000) + '|' + e.sessionPct + '|' + e.weeklyPct;
+  return e.sessionPct + '|' + e.weeklyPct;
 }
 
 function dedupEntries(entries) {
-  const seen = new Set();
-  const out = [];
+  const seen = new Map();
   for (const e of entries) {
     const k = dedupKey(e);
-    if (seen.has(k)) continue;
-    seen.add(k);
-    out.push(e);
+    if (!seen.has(k) || e.ts > seen.get(k).ts) {
+      seen.set(k, e);
+    }
   }
-  return out;
+  return Array.from(seen.values()).sort(function(a, b) { return a.ts - b.ts; });
 }
 
 function loadHistory() {
@@ -32,9 +31,15 @@ function loadHistory() {
 
 function saveEntry(entry) {
   const history = loadHistory();
-  const keys = new Set(history.map(dedupKey));
-  if (keys.has(dedupKey(entry))) return;
-  history.push(entry);
+  const entryKey = dedupKey(entry);
+  const existing = history.find(function(e) { return dedupKey(e) === entryKey; });
+  if (existing && entry.ts <= existing.ts) return;
+  if (existing) {
+    const idx = history.indexOf(existing);
+    history[idx] = entry;
+  } else {
+    history.push(entry);
+  }
   if (history.length > MAX_ENTRIES) history.splice(0, history.length - MAX_ENTRIES);
   localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
 }
@@ -49,6 +54,12 @@ function loadLastInput() {
 
 function clearHistory() {
   localStorage.removeItem(HISTORY_KEY);
+}
+
+function deleteEntry(ts) {
+  const history = loadHistory();
+  const next = history.filter(function(e) { return e.ts !== ts; });
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
 }
 
 function exportJSON() {

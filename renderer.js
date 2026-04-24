@@ -43,6 +43,14 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent) {
     : DAYS_R[resetDate.getDay()] + ' ' + rh12 + ':' + rmm + rampm;
   card.appendChild(statRow('Resets', resetLabel));
 
+  if (label === 'Weekly') {
+    const fullSessionsRemaining = Math.max(0, (100 - actualPct) * WEEKLY_WINDOW_HOURS / SESSION_WINDOW_HOURS / 100);
+    card.appendChild(statRow('Full sessions remaining', fmt(fullSessionsRemaining)));
+
+    const windowsUntilReset = hoursLeft / SESSION_WINDOW_HOURS;
+    card.appendChild(statRow('5-hr windows until reset', fmt(windowsUntilReset)));
+  }
+
   const badgeClass = status === 'over' ? 'badge-over' : status === 'under' ? 'badge-under' : 'badge-on';
   const badgeText  = status === 'over'  ? 'OVER, USE SLOWER'
                    : status === 'under' ? 'UNDER, USE FASTER'
@@ -110,6 +118,11 @@ function buildUnifiedBar(actualPct, targetPct, status) {
     tick.style.left = t + '%';
     track.appendChild(tick);
   });
+
+  const targetMarker = document.createElement('div');
+  targetMarker.className = 'bar-target-marker';
+  targetMarker.style.left = targetClamped + '%';
+  track.appendChild(targetMarker);
 
   const dot = document.createElement('div');
   dot.className = 'bar-endpoint-dot ' + statusClass;
@@ -274,11 +287,10 @@ function renderHistory(entries) {
     return;
   }
 
-  const details = document.createElement('details');
-  const summary = document.createElement('summary');
-  summary.className = 'history-summary';
-  summary.textContent = 'Usage History';
-  details.appendChild(summary);
+  const title = document.createElement('div');
+  title.className = 'history-title';
+  title.textContent = 'Usage History';
+  container.appendChild(title);
 
   const analysis = analyzeHistory(entries);
   const analysisEl = document.createElement('div');
@@ -288,13 +300,11 @@ function renderHistory(entries) {
   if (analysis.sessionAvg7d != null) parts.push('session ' + fmt(analysis.sessionAvg7d) + '% (' + analysis.sessionTrend + ')');
   if (analysis.weeklyAvg7d != null) parts.push('weekly ' + fmt(analysis.weeklyAvg7d) + '% (' + analysis.weeklyTrend + ')');
   analysisEl.textContent = parts.length ? '7-day avg: ' + parts.join(', ') : '';
-  details.appendChild(analysisEl);
+  container.appendChild(analysisEl);
 
-  details.appendChild(buildChart(entries));
-  details.appendChild(buildHistoryTable(entries));
-  details.appendChild(buildHistoryButtons());
-
-  container.appendChild(details);
+  container.appendChild(buildChart(entries));
+  container.appendChild(buildHistoryTable(entries));
+  container.appendChild(buildHistoryButtons());
 }
 
 function buildChart(entries) {
@@ -365,9 +375,12 @@ function buildHistoryTable(entries) {
   th2.textContent = 'Session %';
   const th3 = document.createElement('th');
   th3.textContent = 'Weekly %';
+  const th4 = document.createElement('th');
+  th4.textContent = '';
   headerRow.appendChild(th1);
   headerRow.appendChild(th2);
   headerRow.appendChild(th3);
+  headerRow.appendChild(th4);
   thead.appendChild(headerRow);
   table.appendChild(thead);
 
@@ -381,9 +394,20 @@ function buildHistoryTable(entries) {
     tdSession.textContent = e.sessionPct != null ? fmt(e.sessionPct) + '%' : '—';
     const tdWeekly = document.createElement('td');
     tdWeekly.textContent = e.weeklyPct != null ? fmt(e.weeklyPct) + '%' : '—';
+    const tdDelete = document.createElement('td');
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn-history-delete';
+    delBtn.textContent = '×';
+    delBtn.title = 'Delete entry';
+    delBtn.addEventListener('click', function() {
+      deleteEntry(e.ts);
+      renderHistory(loadHistory());
+    });
+    tdDelete.appendChild(delBtn);
     tr.appendChild(tdDate);
     tr.appendChild(tdSession);
     tr.appendChild(tdWeekly);
+    tr.appendChild(tdDelete);
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
