@@ -61,14 +61,15 @@ document.getElementById('btn-paste').addEventListener('click', function() {
   navigator.clipboard.readText().then(function(text) {
     textarea.value = text;
     run();
-  }).catch(function() {
+  }).catch(function(err) {
+    errorEl.textContent = 'Paste failed: ' + (err && err.message ? err.message : 'clipboard access denied');
   });
 });
 
 function exponentToLabel(v) {
   if (v <= 0.5)  return 'aggressive';
-  if (v <= 0.65) return 'front-loaded';
-  if (v <= 0.8)  return 'slight push';
+  if (v <= 0.65) return 'lighter usage later';
+  if (v <= 0.8)  return 'measured';
   return 'conservative';
 }
 

@@ -1,5 +1,5 @@
-let sessionExponent = 0.55;
-let weeklyExponent  = 0.65;
+let sessionExponent = 0.8;
+let weeklyExponent  = 0.8;
 
 function renderResults(parsed) {
   const container = document.getElementById('results');
