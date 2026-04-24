@@ -7,16 +7,16 @@ function renderResults(parsed) {
 
   if (parsed.session) {
     const stats = computeStats(SESSION_WINDOW_HOURS, parsed.session.hoursLeft, parsed.session.actualPct, sessionExponent);
-    container.appendChild(buildCard('Session', parsed.session.actualPct, stats, SESSION_WINDOW_HOURS, parsed.session.hoursLeft));
+    container.appendChild(buildCard('Session', parsed.session.actualPct, stats, SESSION_WINDOW_HOURS, parsed.session.hoursLeft, sessionExponent));
   }
 
   if (parsed.weekly) {
     const stats = computeStats(WEEKLY_WINDOW_HOURS, parsed.weekly.hoursLeft, parsed.weekly.actualPct, weeklyExponent);
-    container.appendChild(buildCard('Weekly', parsed.weekly.actualPct, stats, WEEKLY_WINDOW_HOURS, parsed.weekly.hoursLeft));
+    container.appendChild(buildCard('Weekly', parsed.weekly.actualPct, stats, WEEKLY_WINDOW_HOURS, parsed.weekly.hoursLeft, weeklyExponent));
   }
 }
 
-function buildCard(label, actualPct, stats, totalHours, hoursLeft) {
+function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent) {
   const { targetPct, diff, status } = stats;
 
   const card = document.createElement('div');
@@ -66,7 +66,7 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft) {
 
   card.appendChild(buildUnifiedBar(actualPct, targetPct, status));
 
-  card.appendChild(buildLegend(totalHours, hoursLeft));
+  card.appendChild(buildLegend(totalHours, hoursLeft, exponent, actualPct));
 
   return card;
 }
@@ -119,7 +119,7 @@ function buildUnifiedBar(actualPct, targetPct, status) {
   return track;
 }
 
-function buildLegend(totalHours, hoursLeft) {
+function buildLegend(totalHours, hoursLeft, exponent, actualPct) {
   const now = Date.now();
   const elapsedMs = (totalHours - hoursLeft) * 3600 * 1000;
   const windowStartMs = now - elapsedMs;
@@ -140,10 +140,18 @@ function buildLegend(totalHours, hoursLeft) {
   const legend = document.createElement('div');
   legend.className = 'bar-legend';
 
+  const e = exponent > 0 ? exponent : 1;
+
+  const remainingMs = hoursLeft * 3600 * 1000;
+  const curveNow = Math.pow(actualPct / 100, 1 / e);
+  const curveEnd = 1;
+
   [10,20,30,40,50,60,70,80,90,100].forEach(function(m) {
-    const hitMs = windowStartMs + (m / 100) * totalMs;
+    const isPast = m <= actualPct;
+    const hitMs = isPast
+      ? windowStartMs + Math.pow(m / 100, 1 / e) * totalMs
+      : now + ((Math.pow(m / 100, 1 / e) - curveNow) / (curveEnd - curveNow)) * remainingMs;
     const hitDate = new Date(hitMs);
-    const isPast = hitMs <= now;
 
     const item = document.createElement('div');
     item.className = 'bar-legend-item' + (isPast ? ' legend-past' : '');

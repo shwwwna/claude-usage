@@ -160,7 +160,7 @@ body.session-hidden .suggestion-item[data-type="session"] {
   top: 0;
   left: 0;
   height: 100%;
-  background: #3a3a3e;
+  background: #6366f1;
   border-radius: 4px;
   transition: width 0.3s ease;
 }
