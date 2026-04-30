@@ -446,7 +446,7 @@ function build5hrWindows(hoursLeft, resetMs, sessionStartMs) {
 
   while (cursor < resetMs) {
     const windowStart = new Date(cursor);
-    const windowEndRaw = new Date(Math.min(cursor + windowMs, resetMs));
+    const windowEnd = new Date(Math.min(cursor + windowMs, resetMs));
 
     if (sleep && sleep.start !== sleep.end) {
       // Find when sleep starts after cursor
@@ -454,8 +454,9 @@ function build5hrWindows(hoursLeft, resetMs, sessionStartMs) {
       sleepOnset.setHours(sleep.start, 0, 0, 0);
       if (sleepOnset <= windowStart) sleepOnset.setDate(sleepOnset.getDate() + 1);
 
-      if (sleepOnset < windowEndRaw) {
-        // This block crosses into sleep — split into awake part then sleep part
+      // Check if sleep period falls within this window
+      if (sleepOnset < windowEnd) {
+        // This window crosses into sleep — split into awake part then sleep part
 
         // Awake portion before sleep
         if (sleepOnset > windowStart) {
@@ -467,16 +468,22 @@ function build5hrWindows(hoursLeft, resetMs, sessionStartMs) {
         wakeTime.setHours(sleep.end, 0, 0, 0);
         if (wakeTime <= sleepOnset) wakeTime.setDate(wakeTime.getDate() + 1);
 
-        const sleepEnd = new Date(Math.min(wakeTime.getTime(), resetMs));
+        // Sleep ends at wake time but window continues to windowEnd
+        const sleepEnd = new Date(Math.min(wakeTime.getTime(), windowEnd));
         windows.push({ start: new Date(sleepOnset), end: sleepEnd, asleep: true });
 
-        // Resume from wake time
-        cursor = wakeTime.getTime();
+        // Awake portion after sleep (if window extends past wake time)
+        if (wakeTime < windowEnd) {
+          windows.push({ start: new Date(wakeTime), end: new Date(windowEnd), asleep: false });
+        }
+
+        // Move to end of this window
+        cursor = windowEnd.getTime();
         continue;
       }
     }
 
-    windows.push({ start: new Date(windowStart), end: new Date(windowEndRaw), asleep: false });
+    windows.push({ start: new Date(windowStart), end: new Date(windowEnd), asleep: false });
     cursor += windowMs;
   }
 
@@ -502,6 +509,7 @@ function build5hrWindows(hoursLeft, resetMs, sessionStartMs) {
   list.className = 'windows-items';
 
   let currentDay = null;
+  let awakeWindowCount = 0;
   windows.forEach(function(w, i) {
     const dayKey = DAYS[w.start.getDay()];
     if (dayKey !== currentDay) {
@@ -517,7 +525,12 @@ function build5hrWindows(hoursLeft, resetMs, sessionStartMs) {
 
     const num = document.createElement('span');
     num.className = 'windows-num';
-    num.textContent = (i + 1) + '.';
+    if (w.asleep) {
+      num.textContent = '';
+    } else {
+      awakeWindowCount++;
+      num.textContent = awakeWindowCount + '.';
+    }
 
     const durationMs = w.end.getTime() - w.start.getTime();
     const durationHours = Math.round(durationMs / (3600 * 1000));
@@ -699,54 +712,88 @@ function buildChart(entries) {
 }
 
 function buildHistoryTable(entries) {
-  const recent = entries.slice(-10).reverse();
-  const table = document.createElement('table');
-  table.className = 'history-table';
-  const thead = document.createElement('thead');
-  const headerRow = document.createElement('tr');
-  const th1 = document.createElement('th');
-  th1.textContent = 'Date/Time';
-  const th2 = document.createElement('th');
-  th2.textContent = 'Session %';
-  const th3 = document.createElement('th');
-  th3.textContent = 'Weekly %';
-  const th4 = document.createElement('th');
-  th4.textContent = '';
-  headerRow.appendChild(th1);
-  headerRow.appendChild(th2);
-  headerRow.appendChild(th3);
-  headerRow.appendChild(th4);
-  thead.appendChild(headerRow);
-  table.appendChild(thead);
+  const sessions = groupBySession(entries);
+  const recentSessions = sessions.slice(-5).reverse();
 
-  const tbody = document.createElement('tbody');
-  recent.forEach(function(e) {
-    const d = new Date(e.ts);
-    const tr = document.createElement('tr');
-    const tdDate = document.createElement('td');
-    tdDate.textContent = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-    const tdSession = document.createElement('td');
-    tdSession.textContent = e.sessionPct != null ? fmt(e.sessionPct) + '%' : '—';
-    const tdWeekly = document.createElement('td');
-    tdWeekly.textContent = e.weeklyPct != null ? fmt(e.weeklyPct) + '%' : '—';
-    const tdDelete = document.createElement('td');
-    const delBtn = document.createElement('button');
-    delBtn.className = 'btn-history-delete';
-    delBtn.textContent = '×';
-    delBtn.title = 'Delete entry';
-    delBtn.addEventListener('click', function() {
-      deleteEntry(e.ts);
-      renderHistory(loadHistory());
+  const container = document.createElement('div');
+  container.className = 'history-sessions-container';
+
+  recentSessions.forEach(function(session) {
+    const sessionDiv = document.createElement('div');
+    sessionDiv.className = 'history-session';
+
+    const sessionHeader = document.createElement('div');
+    sessionHeader.className = 'session-header';
+
+    const startDate = new Date(session.startTime);
+    const endDate = new Date(session.endTime);
+    const durationMin = Math.round(session.durationMs / 60000);
+    const durationHours = Math.floor(durationMin / 60);
+    const durationMins = durationMin % 60;
+    const durationStr = durationHours > 0
+      ? durationHours + 'h ' + durationMins + 'm'
+      : durationMins + 'm';
+
+    const dateStr = startDate.toLocaleDateString() + ' ' + startDate.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    const durationEl = document.createElement('span');
+    durationEl.className = 'session-duration';
+    durationEl.textContent = '(' + durationStr + ')';
+
+    sessionHeader.innerHTML = '<span class="session-date">' + dateStr + '</span>';
+    sessionHeader.appendChild(durationEl);
+    sessionDiv.appendChild(sessionHeader);
+
+    const table = document.createElement('table');
+    table.className = 'history-table';
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+    const th1 = document.createElement('th');
+    th1.textContent = 'Time';
+    const th2 = document.createElement('th');
+    th2.textContent = 'Session %';
+    const th3 = document.createElement('th');
+    th3.textContent = 'Weekly %';
+    const th4 = document.createElement('th');
+    th4.textContent = '';
+    headerRow.appendChild(th1);
+    headerRow.appendChild(th2);
+    headerRow.appendChild(th3);
+    headerRow.appendChild(th4);
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    session.entries.forEach(function(e) {
+      const d = new Date(e.ts);
+      const tr = document.createElement('tr');
+      const tdTime = document.createElement('td');
+      tdTime.textContent = d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+      const tdSession = document.createElement('td');
+      tdSession.textContent = e.sessionPct != null ? fmt(e.sessionPct) + '%' : '—';
+      const tdWeekly = document.createElement('td');
+      tdWeekly.textContent = e.weeklyPct != null ? fmt(e.weeklyPct) + '%' : '—';
+      const tdDelete = document.createElement('td');
+      const delBtn = document.createElement('button');
+      delBtn.className = 'btn-history-delete';
+      delBtn.textContent = '×';
+      delBtn.title = 'Delete entry';
+      delBtn.addEventListener('click', function() {
+        deleteEntry(e.ts);
+        renderHistory(loadHistory());
+      });
+      tdDelete.appendChild(delBtn);
+      tr.appendChild(tdTime);
+      tr.appendChild(tdSession);
+      tr.appendChild(tdWeekly);
+      tr.appendChild(tdDelete);
+      tbody.appendChild(tr);
     });
-    tdDelete.appendChild(delBtn);
-    tr.appendChild(tdDate);
-    tr.appendChild(tdSession);
-    tr.appendChild(tdWeekly);
-    tr.appendChild(tdDelete);
-    tbody.appendChild(tr);
+    table.appendChild(tbody);
+    sessionDiv.appendChild(table);
+    container.appendChild(sessionDiv);
   });
-  table.appendChild(tbody);
-  return table;
+
+  return container;
 }
 
 let _fileInput = null;

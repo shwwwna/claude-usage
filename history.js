@@ -1,7 +1,10 @@
 const HISTORY_KEY = 'claude-usage-history';
 const LAST_INPUT_KEY = 'claude-usage-last-input';
 const SESSION_START_TIME_KEY = 'claude-usage-session-start-time';
+const SESSION_ID_KEY = 'claude-usage-session-id';
+const SESSION_CREATED_KEY = 'claude-usage-session-created';
 const MAX_ENTRIES = 200;
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
 
 function dedupKey(e) {
   return e.sessionPct + '|' + e.weeklyPct;
@@ -30,8 +33,25 @@ function loadHistory() {
   } catch { return []; }
 }
 
+function getOrCreateSessionId() {
+  try {
+    const data = JSON.parse(localStorage.getItem(SESSION_ID_KEY) || '{}');
+    const now = Date.now();
+    if (data.id && data.createdAt && (now - data.createdAt) < SESSION_TIMEOUT_MS) {
+      return data.id;
+    }
+  } catch (e) {}
+
+  const newId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  localStorage.setItem(SESSION_ID_KEY, JSON.stringify({ id: newId, createdAt: Date.now() }));
+  return newId;
+}
+
 function saveEntry(entry) {
   const history = loadHistory();
+  const sessionId = getOrCreateSessionId();
+  entry.sessionId = sessionId;
+
   const entryKey = dedupKey(entry);
   const existing = history.find(function(e) { return dedupKey(e) === entryKey; });
   if (existing && entry.ts <= existing.ts) return;
@@ -115,6 +135,45 @@ function importJSON(file) {
     reader.onerror = function() { reject('Read error'); };
     reader.readAsText(file);
   });
+}
+
+function groupBySession(entries) {
+  const TOLERANCE_MS = 5 * 60 * 1000;
+  const grouped = [];
+
+  entries.forEach(function(e) {
+    let placed = false;
+    for (let i = 0; i < grouped.length; i++) {
+      const g = grouped[i];
+      const maxTs = Math.max.apply(null, g.map(function(x) { return x.ts; }));
+      if (Math.abs(e.ts - maxTs) <= TOLERANCE_MS) {
+        g.push(e);
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) {
+      grouped.push([e]);
+    }
+  });
+
+  return grouped
+    .sort(function(a, b) {
+      const aEndTs = Math.max.apply(null, a.map(function(e) { return e.ts; }));
+      const bEndTs = Math.max.apply(null, b.map(function(e) { return e.ts; }));
+      return aEndTs - bEndTs;
+    })
+    .map(function(sessionEntries) {
+      const minTs = Math.min.apply(null, sessionEntries.map(function(e) { return e.ts; }));
+      const maxTs = Math.max.apply(null, sessionEntries.map(function(e) { return e.ts; }));
+      return {
+        sessionId: sessionEntries[0].sessionId || 'unknown',
+        entries: sessionEntries.sort(function(a, b) { return a.ts - b.ts; }),
+        startTime: minTs,
+        endTime: maxTs,
+        durationMs: maxTs - minTs
+      };
+    });
 }
 
 function analyzeHistory(entries) {
