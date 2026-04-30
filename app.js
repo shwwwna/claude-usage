@@ -190,6 +190,7 @@ function buildSleepOptions() {
   function onSleepChange() {
     localStorage.setItem('claude-usage-sleep-start', document.getElementById('sleep-start').value);
     localStorage.setItem('claude-usage-sleep-end', document.getElementById('sleep-end').value);
+    updateFeasibilityRow();
     run({ skipAutoPace: true });
   }
   if (startSel) startSel.addEventListener('change', onSleepChange);

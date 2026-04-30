@@ -1,7 +1,9 @@
 let sessionExponent = 0.8;
 let weeklyExponent  = 0.8;
+let lastParsed = null;
 
 function renderResults(parsed) {
+  lastParsed = parsed;
   const container = document.getElementById('results');
   container.innerHTML = '';
 
@@ -12,7 +14,7 @@ function renderResults(parsed) {
 
   if (parsed.weekly) {
     const stats = computeStats(WEEKLY_WINDOW_HOURS, parsed.weekly.hoursLeft, parsed.weekly.actualPct, weeklyExponent);
-    container.appendChild(buildCard('Weekly', parsed.weekly.actualPct, stats, WEEKLY_WINDOW_HOURS, parsed.weekly.hoursLeft, weeklyExponent));
+    container.appendChild(buildCard('Weekly', parsed.weekly.actualPct, stats, WEEKLY_WINDOW_HOURS, parsed.weekly.hoursLeft, weeklyExponent, parsed.session));
   }
 
   const resetMs = parsed.weekly ? Date.now() + parsed.weekly.hoursLeft * 3600 * 1000 : Date.now() + 24 * 3600 * 1000;
@@ -24,9 +26,46 @@ function renderResults(parsed) {
     sessionStartMs = now - (SESSION_WINDOW_HOURS - parsed.session.hoursLeft) * 3600 * 1000;
   }
   container.appendChild(buildSleepAndWindowsCard(hoursLeft, resetMs, sessionStartMs));
+  updateFeasibilityRow();
 }
 
-function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent) {
+function updateFeasibilityRow() {
+  const el = document.getElementById('weekly-feasibility-row');
+  if (!el || !lastParsed || !lastParsed.weekly || !lastParsed.session) return;
+
+  const actualPct = lastParsed.weekly.actualPct;
+  const hoursLeft = lastParsed.weekly.hoursLeft;
+  const weeklyRemaining = 100 - actualPct;
+  const weeklyResetMs = Date.now() + hoursLeft * 3600 * 1000;
+  const sessionStartMs = Date.now() - (SESSION_WINDOW_HOURS - lastParsed.session.hoursLeft) * 3600 * 1000;
+  const awakeWindows = countAwakeWindows(weeklyResetMs, sessionStartMs);
+  const reachableAdditional = awakeWindows * (SESSION_WINDOW_HOURS / WEEKLY_WINDOW_HOURS) * 100;
+  const reachablePct = Math.min(100, actualPct + reachableAdditional);
+  const constrained = reachableAdditional < weeklyRemaining - 5;
+
+  el.innerHTML = '';
+  if (!constrained) return;
+
+  el.className = 'stat-row compact-meta-row';
+
+  const feasCell = document.createElement('span');
+  feasCell.className = 'compact-meta-cell';
+
+  const feasLabel = document.createElement('span');
+  feasLabel.className = 'stat-label';
+  feasLabel.textContent = 'Reachable';
+
+  const feasVal = document.createElement('span');
+  feasVal.className = 'stat-value fraction-value';
+  feasVal.innerHTML = '<span class="frac-actual">' + fmt(reachablePct) + '%</span><span class="frac-sep">/</span><span class="frac-target">100%</span>';
+
+  feasCell.appendChild(feasLabel);
+  feasCell.appendChild(feasVal);
+
+  el.appendChild(feasCell);
+}
+
+function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent, sessionData) {
   const { targetPct, diff, status } = stats;
 
   const card = document.createElement('div');
@@ -98,6 +137,12 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent) {
 
     weeklyCompactRow.appendChild(sessCell);
     card.appendChild(weeklyCompactRow);
+
+    if (sessionData) {
+      const feasPlaceholder = document.createElement('div');
+      feasPlaceholder.id = 'weekly-feasibility-row';
+      card.appendChild(feasPlaceholder);
+    }
   }
 
   const badgeClass = status === 'over' ? 'badge-over' : status === 'under' ? 'badge-under' : 'badge-on';
@@ -348,6 +393,7 @@ function buildSleepAndWindowsCard(hoursLeft, resetMs, sessionStartMs) {
     const newWindows = build5hrWindows(hoursLeft, resetMs, sessionStartMs);
     card.replaceChild(newWindows, windowsContainer);
     windowsContainer = newWindows;
+    updateFeasibilityRow();
   }
 
   startSelect.addEventListener('change', updateWindows);
@@ -356,6 +402,37 @@ function buildSleepAndWindowsCard(hoursLeft, resetMs, sessionStartMs) {
   card.appendChild(windowsContainer);
 
   return card;
+}
+
+function countAwakeWindows(resetMs, sessionStartMs) {
+  const sleep = getSleepHours();
+  const windowMs = SESSION_WINDOW_HOURS * 3600 * 1000;
+  let cursor = sessionStartMs !== null ? sessionStartMs : Date.now();
+  let count = 0;
+
+  while (cursor < resetMs) {
+    const windowStart = new Date(cursor);
+    const windowEndRaw = new Date(Math.min(cursor + windowMs, resetMs));
+
+    if (sleep && sleep.start !== sleep.end) {
+      const sleepOnset = new Date(windowStart);
+      sleepOnset.setHours(sleep.start, 0, 0, 0);
+      if (sleepOnset <= windowStart) sleepOnset.setDate(sleepOnset.getDate() + 1);
+
+      if (sleepOnset < windowEndRaw) {
+        const wakeTime = new Date(sleepOnset);
+        wakeTime.setHours(sleep.end, 0, 0, 0);
+        if (wakeTime <= sleepOnset) wakeTime.setDate(wakeTime.getDate() + 1);
+        cursor = wakeTime.getTime();
+        continue;
+      }
+    }
+
+    count++;
+    cursor += windowMs;
+  }
+
+  return count;
 }
 
 function build5hrWindows(hoursLeft, resetMs, sessionStartMs) {

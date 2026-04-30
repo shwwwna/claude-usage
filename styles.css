@@ -137,9 +137,10 @@ body.session-hidden .suggestion-item[data-type="session"] {
   padding: 0.15rem 0.5rem;
   border-radius: 4px;
 }
-.badge-over  { background: #450a0a; color: #fca5a5; }
-.badge-under { background: #052e16; color: #86efac; }
-.badge-on    { background: #1e1b4b; color: #a5b4fc; }
+.badge-over        { background: #450a0a; color: #fca5a5; }
+.badge-under       { background: #052e16; color: #86efac; }
+.badge-on          { background: #1e1b4b; color: #a5b4fc; }
+.badge-constrained { background: #451a03; color: #fdba74; }
 
 .diff-value { font-variant-numeric: tabular-nums; }
 .diff-over  { color: #fca5a5; }
