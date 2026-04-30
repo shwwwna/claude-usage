@@ -1,97 +1,118 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Claude Usage Tracker</title>
-<link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="styles.css">
-<meta name="theme-color" content="#0f0f11">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Claude Usage">
-</head>
-<body>
-<h1>Claude Usage Tracker</h1>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Claude Usage Tracker</title>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+    <meta name="theme-color" content="#0f0f11" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Claude Usage" />
+  </head>
+  <body>
+    <h1>Claude Usage Tracker</h1>
 
-<div class="input-area">
-  <textarea id="input" placeholder="Paste usage text from claude.ai/settings/usage&#10;&#10;Example:&#10;Current session&#10;Resets in 1 hr 30 min&#10;74% used&#10;&#10;Weekly limits&#10;All models&#10;Resets Fri 5:59 AM&#10;65% used"></textarea>
-  <div class="btn-row">
-    <button id="btn-open-usage">⬡ Open Claude Usage</button>
-    <button id="btn-paste">Paste</button>
-    <button id="btn-clear">Clear</button>
-    <button id="btn-toggle-session">Show session calculation</button>
-    <button id="btn-alarm-toggle">🔔 Alarm: off</button>
-  </div>
-</div>
-
-<div id="error"></div>
-
-<div class="results" id="results"></div>
-
-<div id="suggestion"></div>
-
-<div class="pacing-controls">
-  <div class="pacing-row" data-type="session">
-    <label for="session-exponent">Session pacing:</label>
-    <input type="range" id="session-exponent" min="0" max="1" step="0.01" value="0.55">
-    <span id="session-exponent-label">Front-loaded</span>
-  </div>
-  <div class="pacing-row">
-    <label for="weekly-exponent">Weekly pacing:</label>
-    <input type="range" id="weekly-exponent" min="0" max="1" step="0.01" value="0.65">
-    <span id="weekly-exponent-label">Front-loaded</span>
-  </div>
-</div>
-
-<div class="pacing-tips">
-  <div class="tips-grid">
-    <div class="tip-card">
-      <div class="tip-level">Aggressive</div>
-      <div class="tip-description">Use most of your quota early</div>
-      <ul class="tip-list">
-        <li>Heavy usage planned for today/early in the week</li>
-        <li>Need fast iteration on urgent work</li>
-        <li>Know you'll have lighter usage later</li>
-      </ul>
+    <div class="input-area">
+      <textarea
+        id="input"
+        placeholder="Paste usage text from claude.ai/settings/usage&#10;&#10;Example:&#10;Current session&#10;Resets in 1 hr 30 min&#10;74% used&#10;&#10;Weekly limits&#10;All models&#10;Resets Fri 5:59 AM&#10;65% used"
+      ></textarea>
+      <div class="btn-row">
+        <button id="btn-open-usage">⬡ Open Claude Usage</button>
+        <button id="btn-paste">Paste</button>
+        <button id="btn-clear">Clear</button>
+        <button id="btn-toggle-session">Show session calculation</button>
+        <button id="btn-alarm-toggle">🔔 Alarm: off</button>
+      </div>
     </div>
-    <div class="tip-card">
-      <div class="tip-level">Front-loaded</div>
-      <div class="tip-description">Slightly skew toward early usage</div>
-      <ul class="tip-list">
-        <li>Plan to work more early, taper off later</li>
-        <li>Natural daily/weekly rhythm with productivity peaks</li>
-        <li>Most common for balanced workflows (default)</li>
-      </ul>
-    </div>
-    <div class="tip-card">
-      <div class="tip-level">Slight Push</div>
-      <div class="tip-description">Nearly even, slight preference for later</div>
-      <ul class="tip-list">
-        <li>Want flexibility and steady usage throughout</li>
-        <li>No strong pattern of high or low periods</li>
-        <li>Prefer not to rush early on</li>
-      </ul>
-    </div>
-    <div class="tip-card">
-      <div class="tip-level">Conservative</div>
-      <div class="tip-description">Spread usage evenly across the period</div>
-      <ul class="tip-list">
-        <li>Uncertain about upcoming workload</li>
-        <li>Want maximum flexibility in usage timing</li>
-        <li>Prefer to save quota for later just in case</li>
-      </ul>
-    </div>
-  </div>
-</div>
 
-<div id="history-panel"></div>
+    <div id="error"></div>
 
-<script src="parser.js"></script>
-<script src="stats.js"></script>
-<script src="history.js"></script>
-<script src="alarm.js"></script>
-<script src="renderer.js"></script>
-<script src="app.js"></script>
-</body>
+    <div class="results" id="results"></div>
+
+    <div id="suggestion"></div>
+
+    <div class="pacing-controls">
+      <div class="pacing-row" data-type="session">
+        <label for="session-exponent">Session pacing:</label>
+        <input
+          type="range"
+          id="session-exponent"
+          min="0"
+          max="1"
+          step="0.01"
+          value="0.55"
+        />
+        <span id="session-exponent-label">Front-loaded</span>
+      </div>
+      <div class="pacing-row">
+        <label for="weekly-exponent">Weekly pacing:</label>
+        <input
+          type="range"
+          id="weekly-exponent"
+          min="0"
+          max="1"
+          step="0.01"
+          value="0.65"
+        />
+        <span id="weekly-exponent-label">Front-loaded</span>
+      </div>
+    </div>
+
+    <div class="pacing-tips">
+      <div class="tips-grid">
+        <div class="tip-card">
+          <div class="tip-level">Aggressive</div>
+          <div class="tip-description">Use most of your quota early</div>
+          <ul class="tip-list">
+            <li>Heavy usage planned for today/early in the week</li>
+            <li>Need fast iteration on urgent work</li>
+            <li>Know you'll have lighter usage later</li>
+          </ul>
+        </div>
+        <div class="tip-card">
+          <div class="tip-level">Front-loaded</div>
+          <div class="tip-description">Slightly skew toward early usage</div>
+          <ul class="tip-list">
+            <li>Plan to work more early, taper off later</li>
+            <li>Natural daily/weekly rhythm with productivity peaks</li>
+            <li>Most common for balanced workflows (default)</li>
+          </ul>
+        </div>
+        <div class="tip-card">
+          <div class="tip-level">Slight Push</div>
+          <div class="tip-description">
+            Nearly even, slight preference for later
+          </div>
+          <ul class="tip-list">
+            <li>Want flexibility and steady usage throughout</li>
+            <li>No strong pattern of high or low periods</li>
+            <li>Prefer not to rush early on</li>
+          </ul>
+        </div>
+        <div class="tip-card">
+          <div class="tip-level">Conservative</div>
+          <div class="tip-description">
+            Spread usage evenly across the period
+          </div>
+          <ul class="tip-list">
+            <li>Uncertain about upcoming workload</li>
+            <li>Want maximum flexibility in usage timing</li>
+            <li>Prefer to save quota for later just in case</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div id="history-panel"></div>
+
+    <script src="parser.js"></script>
+    <script src="stats.js"></script>
+    <script src="history.js"></script>
+    <script src="alarm.js"></script>
+    <script src="renderer.js"></script>
+    <script src="app.js"></script>
+  </body>
 </html>

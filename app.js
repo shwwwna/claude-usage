@@ -46,8 +46,15 @@ function run(options) {
       renderSuggestion(parsed);
 
       if (parsed.session) {
-        const resetMs = Date.now() + parsed.session.hoursLeft * 3600 * 1000;
+        const now = Date.now();
+        const elapsedHours = SESSION_WINDOW_HOURS - parsed.session.hoursLeft;
+        const sessionStartMs = now - (elapsedHours * 3600 * 1000);
+        const resetMs = now + parsed.session.hoursLeft * 3600 * 1000;
+        saveSessionStartTime(sessionStartMs);
         scheduleSessionAlarm(resetMs);
+      } else {
+        // Clear session start time if no session data
+        localStorage.removeItem('claude-usage-session-start-time');
       }
 
       if (parsed.session || parsed.weekly) {
@@ -152,7 +159,45 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js');
 }
 
+function buildSleepOptions() {
+  const labels = [
+    '12am','1am','2am','3am','4am','5am','6am','7am','8am','9am','10am','11am',
+    '12pm','1pm','2pm','3pm','4pm','5pm','6pm','7pm','8pm','9pm','10pm','11pm'
+  ];
+  ['sleep-start','sleep-end'].forEach(function(id) {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = '';
+    labels.forEach(function(lbl, h) {
+      const opt = document.createElement('option');
+      opt.value = h;
+      opt.textContent = lbl;
+      sel.appendChild(opt);
+    });
+    sel.value = cur;
+  });
+  const startSel = document.getElementById('sleep-start');
+  const endSel = document.getElementById('sleep-end');
+  if (startSel) {
+    const saved = localStorage.getItem('claude-usage-sleep-start');
+    if (saved !== null) startSel.value = saved;
+  }
+  if (endSel) {
+    const saved = localStorage.getItem('claude-usage-sleep-end');
+    if (saved !== null) endSel.value = saved;
+  }
+  function onSleepChange() {
+    localStorage.setItem('claude-usage-sleep-start', document.getElementById('sleep-start').value);
+    localStorage.setItem('claude-usage-sleep-end', document.getElementById('sleep-end').value);
+    run({ skipAutoPace: true });
+  }
+  if (startSel) startSel.addEventListener('change', onSleepChange);
+  if (endSel) endSel.addEventListener('change', onSleepChange);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+  buildSleepOptions();
   const stored = localStorage.getItem(SHOW_SESSION_KEY);
   setSessionVisible(stored === '1');
   updateAlarmButtonLabel();

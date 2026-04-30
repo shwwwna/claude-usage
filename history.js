@@ -1,5 +1,6 @@
 const HISTORY_KEY = 'claude-usage-history';
 const LAST_INPUT_KEY = 'claude-usage-last-input';
+const SESSION_START_TIME_KEY = 'claude-usage-session-start-time';
 const MAX_ENTRIES = 200;
 
 function dedupKey(e) {
@@ -50,6 +51,28 @@ function saveLastInput(text) {
 
 function loadLastInput() {
   return localStorage.getItem(LAST_INPUT_KEY) || '';
+}
+
+function saveSessionStartTime(ms) {
+  localStorage.setItem(SESSION_START_TIME_KEY, JSON.stringify({
+    startMs: ms,
+    savedAt: Date.now()
+  }));
+}
+
+function loadSessionStartTime() {
+  try {
+    const val = localStorage.getItem(SESSION_START_TIME_KEY);
+    if (!val) return null;
+    const data = JSON.parse(val);
+    // Only use if saved less than 5.5 hours ago (session window + buffer)
+    if (Date.now() - data.savedAt < 5.5 * 3600 * 1000) {
+      return data.startMs;
+    }
+  } catch (e) {
+    // ignore parse errors
+  }
+  return null;
 }
 
 function clearHistory() {

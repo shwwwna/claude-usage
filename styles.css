@@ -598,3 +598,127 @@ body.session-hidden .suggestion-item[data-type="session"] {
   0%, 100% { background: rgba(0, 0, 0, 0.75); }
   50% { background: rgba(80, 0, 0, 0.85); }
 }
+
+/* Compact meta row */
+.compact-meta-row {
+  gap: 1.5rem;
+}
+
+.compact-meta-cell {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.fraction-value {
+  font-size: 0.85rem;
+}
+
+.frac-actual { color: #e8e8ed; }
+.frac-sep { color: #555; font-size: 0.75rem; margin: 0 0.1rem; }
+.frac-target { color: #888; }
+
+/* Sleep input row */
+.sleep-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: #888;
+  margin-top: 0.25rem;
+}
+
+.sleep-label { color: #666; white-space: nowrap; }
+
+.sleep-select {
+  background: #1c1c1f;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #aaa;
+  font-size: 0.7rem;
+  padding: 0.2rem 0.35rem;
+  cursor: pointer;
+  outline: none;
+}
+
+.sleep-select:focus { border-color: #555; }
+
+.sleep-sep { color: #555; }
+
+/* 5-hr windows list */
+.windows-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.windows-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.windows-total {
+  font-size: 0.65rem;
+  color: #555;
+}
+
+.windows-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.windows-day {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #666;
+  margin-top: 0.35rem;
+  margin-bottom: 0.05rem;
+}
+
+.windows-day:first-child { margin-top: 0; }
+
+.windows-item {
+  display: flex;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  color: #bbb;
+  padding: 0.05rem 0;
+}
+
+.windows-item-sleep {
+  color: #666;
+}
+
+.windows-num {
+  color: #555;
+  min-width: 1.2rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.windows-item-sleep .windows-num { color: #555; }
+
+.windows-range {
+  font-variant-numeric: tabular-nums;
+  flex: 1;
+  color: #d8d8e8;
+  font-weight: 500;
+}
+
+.windows-item-sleep .windows-range {
+  color: #777;
+  font-weight: normal;
+}
+
+.windows-range .windows-duration {
+  color: #999;
+  margin-left: 0.3em;
+}
+
+.windows-item-sleep .windows-range .windows-duration {
+  color: #666;
+}

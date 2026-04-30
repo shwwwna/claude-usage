@@ -14,6 +14,16 @@ function renderResults(parsed) {
     const stats = computeStats(WEEKLY_WINDOW_HOURS, parsed.weekly.hoursLeft, parsed.weekly.actualPct, weeklyExponent);
     container.appendChild(buildCard('Weekly', parsed.weekly.actualPct, stats, WEEKLY_WINDOW_HOURS, parsed.weekly.hoursLeft, weeklyExponent));
   }
+
+  const resetMs = parsed.weekly ? Date.now() + parsed.weekly.hoursLeft * 3600 * 1000 : Date.now() + 24 * 3600 * 1000;
+  const hoursLeft = parsed.weekly ? parsed.weekly.hoursLeft : 24;
+  let sessionStartMs = loadSessionStartTime();
+  // If no saved session start, calculate from current session data
+  if (!sessionStartMs && parsed.session) {
+    const now = Date.now();
+    sessionStartMs = now - (SESSION_WINDOW_HOURS - parsed.session.hoursLeft) * 3600 * 1000;
+  }
+  container.appendChild(buildSleepAndWindowsCard(hoursLeft, resetMs, sessionStartMs));
 }
 
 function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent) {
@@ -28,9 +38,6 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent) {
   title.textContent = label;
   card.appendChild(title);
 
-  card.appendChild(statRow('Actual used', fmt(actualPct) + '%'));
-  card.appendChild(statRow('Target used', fmt(targetPct) + '%'));
-
   const resetMs = Date.now() + hoursLeft * 3600 * 1000;
   const resetDate = new Date(resetMs);
   const DAYS_R = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -41,14 +48,56 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent) {
   const resetLabel = resetDate.toDateString() === new Date().toDateString()
     ? 'today ' + rh12 + ':' + rmm + rampm
     : DAYS_R[resetDate.getDay()] + ' ' + rh12 + ':' + rmm + rampm;
-  card.appendChild(statRow('Resets', resetLabel));
+
+  const compactRow = document.createElement('div');
+  compactRow.className = 'stat-row compact-meta-row';
+
+  const usageCell = document.createElement('span');
+  usageCell.className = 'compact-meta-cell';
+  const usageLabel = document.createElement('span');
+  usageLabel.className = 'stat-label';
+  usageLabel.textContent = 'Used';
+  const usageFrac = document.createElement('span');
+  usageFrac.className = 'stat-value fraction-value';
+  usageFrac.innerHTML = '<span class="frac-actual">' + fmt(actualPct) + '%</span><span class="frac-sep">/</span><span class="frac-target">' + fmt(targetPct) + '%</span>';
+  usageCell.appendChild(usageLabel);
+  usageCell.appendChild(usageFrac);
+
+  const resetCell = document.createElement('span');
+  resetCell.className = 'compact-meta-cell';
+  const resetLabel2 = document.createElement('span');
+  resetLabel2.className = 'stat-label';
+  resetLabel2.textContent = 'Resets';
+  const resetVal = document.createElement('span');
+  resetVal.className = 'stat-value';
+  resetVal.textContent = resetLabel;
+  resetCell.appendChild(resetLabel2);
+  resetCell.appendChild(resetVal);
+
+  compactRow.appendChild(usageCell);
+  compactRow.appendChild(resetCell);
+  card.appendChild(compactRow);
 
   if (label === 'Weekly') {
     const fullSessionsRemaining = Math.max(0, (100 - actualPct) * WEEKLY_WINDOW_HOURS / SESSION_WINDOW_HOURS / 100);
-    card.appendChild(statRow('Full sessions remaining', fmt(fullSessionsRemaining)));
-
     const windowsUntilReset = hoursLeft / SESSION_WINDOW_HOURS;
-    card.appendChild(statRow('5-hr windows until reset', fmt(windowsUntilReset)));
+
+    const weeklyCompactRow = document.createElement('div');
+    weeklyCompactRow.className = 'stat-row compact-meta-row';
+
+    const sessCell = document.createElement('span');
+    sessCell.className = 'compact-meta-cell';
+    const sessLabel = document.createElement('span');
+    sessLabel.className = 'stat-label';
+    sessLabel.textContent = 'Sessions left';
+    const sessFrac = document.createElement('span');
+    sessFrac.className = 'stat-value fraction-value';
+    sessFrac.innerHTML = '<span class="frac-actual">' + fmt(fullSessionsRemaining) + '</span><span class="frac-sep">/</span><span class="frac-target">' + fmt(windowsUntilReset) + '</span>';
+    sessCell.appendChild(sessLabel);
+    sessCell.appendChild(sessFrac);
+
+    weeklyCompactRow.appendChild(sessCell);
+    card.appendChild(weeklyCompactRow);
   }
 
   const badgeClass = status === 'over' ? 'badge-over' : status === 'under' ? 'badge-under' : 'badge-on';
@@ -205,6 +254,215 @@ function buildLegend(totalHours, hoursLeft, exponent, actualPct) {
   });
 
   return legend;
+}
+
+function getSleepHours() {
+  const input = document.getElementById('sleep-start');
+  const input2 = document.getElementById('sleep-end');
+  if (!input || !input2) return { start: 22, end: 7 };
+  const s = parseInt(input.value, 10);
+  const e = parseInt(input2.value, 10);
+  if (isNaN(s) || isNaN(e)) return { start: 22, end: 7 };
+  return { start: s, end: e };
+}
+
+function isWindowAsleep(windowStartHour, windowEndHour, sleepStart, sleepEnd) {
+  if (sleepStart === sleepEnd) return false;
+  // Normalize to check overlap. Sleep may wrap midnight.
+  // windowStartHour/windowEndHour are in [0,24)
+  function hoursOverlap(ws, we, ss, se) {
+    // expand to [0, 48) if sleep wraps midnight
+    if (ss < se) {
+      return we > ss && ws < se;
+    } else {
+      // wraps: ss..24 and 0..se
+      return we > ss || ws < se;
+    }
+  }
+  return hoursOverlap(windowStartHour, windowEndHour, sleepStart, sleepEnd);
+}
+
+function fmtTime(date) {
+  const h = date.getHours(), m = date.getMinutes();
+  const ampm = h >= 12 ? 'pm' : 'am';
+  const h12 = h % 12 || 12;
+  return m === 0 ? h12 + ampm : h12 + ':' + (m < 10 ? '0' + m : m) + ampm;
+}
+
+function buildSleepAndWindowsCard(hoursLeft, resetMs, sessionStartMs) {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.dataset.type = 'sleep-windows';
+
+  const title = document.createElement('div');
+  title.className = 'card-title';
+  title.textContent = 'Sleep & Windows';
+  card.appendChild(title);
+
+  const sleepRow = document.createElement('div');
+  sleepRow.className = 'sleep-row';
+
+  const label = document.createElement('label');
+  label.className = 'sleep-label';
+  label.textContent = 'Sleep hours:';
+  sleepRow.appendChild(label);
+
+  const startSelect = document.createElement('select');
+  startSelect.id = 'sleep-start';
+  startSelect.className = 'sleep-select';
+  for (let i = 0; i < 24; i++) {
+    const opt = document.createElement('option');
+    opt.value = i;
+    const h = i % 12 || 12;
+    const ampm = i >= 12 ? 'pm' : 'am';
+    opt.textContent = h + ampm;
+    if (i === 22) opt.selected = true;
+    startSelect.appendChild(opt);
+  }
+  sleepRow.appendChild(startSelect);
+
+  const sep = document.createElement('span');
+  sep.className = 'sleep-sep';
+  sep.textContent = '–';
+  sleepRow.appendChild(sep);
+
+  const endSelect = document.createElement('select');
+  endSelect.id = 'sleep-end';
+  endSelect.className = 'sleep-select';
+  for (let i = 0; i < 24; i++) {
+    const opt = document.createElement('option');
+    opt.value = i;
+    const h = i % 12 || 12;
+    const ampm = i >= 12 ? 'pm' : 'am';
+    opt.textContent = h + ampm;
+    if (i === 7) opt.selected = true;
+    endSelect.appendChild(opt);
+  }
+  sleepRow.appendChild(endSelect);
+
+  card.appendChild(sleepRow);
+
+  let windowsContainer = build5hrWindows(hoursLeft, resetMs, sessionStartMs);
+
+  function updateWindows() {
+    const newWindows = build5hrWindows(hoursLeft, resetMs, sessionStartMs);
+    card.replaceChild(newWindows, windowsContainer);
+    windowsContainer = newWindows;
+  }
+
+  startSelect.addEventListener('change', updateWindows);
+  endSelect.addEventListener('change', updateWindows);
+
+  card.appendChild(windowsContainer);
+
+  return card;
+}
+
+function build5hrWindows(hoursLeft, resetMs, sessionStartMs) {
+  const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const sleep = getSleepHours();
+
+  // Build list of windows from session start to reset
+  const windows = [];
+  const windowMs = SESSION_WINDOW_HOURS * 3600 * 1000;
+  let cursor = sessionStartMs !== null ? sessionStartMs : Date.now();
+
+  while (cursor < resetMs) {
+    const windowStart = new Date(cursor);
+    const windowEndRaw = new Date(Math.min(cursor + windowMs, resetMs));
+
+    if (sleep && sleep.start !== sleep.end) {
+      // Find when sleep starts after cursor
+      const sleepOnset = new Date(windowStart);
+      sleepOnset.setHours(sleep.start, 0, 0, 0);
+      if (sleepOnset <= windowStart) sleepOnset.setDate(sleepOnset.getDate() + 1);
+
+      if (sleepOnset < windowEndRaw) {
+        // This block crosses into sleep — split into awake part then sleep part
+
+        // Awake portion before sleep
+        if (sleepOnset > windowStart) {
+          windows.push({ start: new Date(windowStart), end: new Date(sleepOnset), asleep: false });
+        }
+
+        // Sleep portion from sleep onset to wake time
+        const wakeTime = new Date(sleepOnset);
+        wakeTime.setHours(sleep.end, 0, 0, 0);
+        if (wakeTime <= sleepOnset) wakeTime.setDate(wakeTime.getDate() + 1);
+
+        const sleepEnd = new Date(Math.min(wakeTime.getTime(), resetMs));
+        windows.push({ start: new Date(sleepOnset), end: sleepEnd, asleep: true });
+
+        // Resume from wake time
+        cursor = wakeTime.getTime();
+        continue;
+      }
+    }
+
+    windows.push({ start: new Date(windowStart), end: new Date(windowEndRaw), asleep: false });
+    cursor += windowMs;
+  }
+
+  const container = document.createElement('div');
+  container.className = 'windows-list';
+
+  const header = document.createElement('div');
+  header.className = 'windows-header';
+
+  const headerLeft = document.createElement('span');
+  headerLeft.className = 'stat-label';
+  headerLeft.textContent = '5-hr windows until reset';
+
+  const totalHoursEl = document.createElement('span');
+  totalHoursEl.className = 'windows-total';
+  totalHoursEl.textContent = 'total ~' + (windows.length * SESSION_WINDOW_HOURS) + ' hrs';
+
+  header.appendChild(headerLeft);
+  header.appendChild(totalHoursEl);
+  container.appendChild(header);
+
+  const list = document.createElement('div');
+  list.className = 'windows-items';
+
+  let currentDay = null;
+  windows.forEach(function(w, i) {
+    const dayKey = DAYS[w.start.getDay()];
+    if (dayKey !== currentDay) {
+      currentDay = dayKey;
+      const dayEl = document.createElement('div');
+      dayEl.className = 'windows-day';
+      dayEl.textContent = dayKey;
+      list.appendChild(dayEl);
+    }
+
+    const item = document.createElement('div');
+    item.className = 'windows-item' + (w.asleep ? ' windows-item-sleep' : '');
+
+    const num = document.createElement('span');
+    num.className = 'windows-num';
+    num.textContent = (i + 1) + '.';
+
+    const durationMs = w.end.getTime() - w.start.getTime();
+    const durationHours = Math.round(durationMs / (3600 * 1000));
+
+    const range = document.createElement('span');
+    range.className = 'windows-range';
+    range.textContent = fmtTime(w.start) + '–' + fmtTime(w.end);
+
+    if (durationHours !== 5) {
+      const durationSpan = document.createElement('span');
+      durationSpan.className = 'windows-duration';
+      durationSpan.textContent = ' (' + durationHours + 'h)';
+      range.appendChild(durationSpan);
+    }
+
+    item.appendChild(num);
+    item.appendChild(range);
+    list.appendChild(item);
+  });
+
+  container.appendChild(list);
+  return container;
 }
 
 function fmt(n) { return n.toFixed(1); }
