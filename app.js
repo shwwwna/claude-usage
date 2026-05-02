@@ -4,10 +4,14 @@ const CONFIG = {
 
 const SHOW_SESSION_KEY = 'claude-usage-show-session';
 
-const textarea = document.getElementById('input');
-const errorEl  = document.getElementById('error');
-
+let textarea;
+let errorEl;
 let debounceTimer;
+
+function getElements() {
+  if (!textarea) textarea = document.getElementById('input');
+  if (!errorEl) errorEl = document.getElementById('error');
+}
 
 function applySuggestedPacing(parsed) {
   if (parsed.session) {
@@ -29,6 +33,8 @@ function applySuggestedPacing(parsed) {
 }
 
 function run(options) {
+  getElements();
+  if (!textarea || !errorEl) return;
   const autoPace = !(options && options.skipAutoPace);
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(function() {
@@ -159,44 +165,6 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js');
 }
 
-function buildSleepOptions() {
-  const labels = [
-    '12am','1am','2am','3am','4am','5am','6am','7am','8am','9am','10am','11am',
-    '12pm','1pm','2pm','3pm','4pm','5pm','6pm','7pm','8pm','9pm','10pm','11pm'
-  ];
-  ['sleep-start','sleep-end'].forEach(function(id) {
-    const sel = document.getElementById(id);
-    if (!sel) return;
-    const cur = sel.value;
-    sel.innerHTML = '';
-    labels.forEach(function(lbl, h) {
-      const opt = document.createElement('option');
-      opt.value = h;
-      opt.textContent = lbl;
-      sel.appendChild(opt);
-    });
-    sel.value = cur;
-  });
-  const startSel = document.getElementById('sleep-start');
-  const endSel = document.getElementById('sleep-end');
-  if (startSel) {
-    const saved = localStorage.getItem('claude-usage-sleep-start');
-    if (saved !== null) startSel.value = saved;
-  }
-  if (endSel) {
-    const saved = localStorage.getItem('claude-usage-sleep-end');
-    if (saved !== null) endSel.value = saved;
-  }
-  function onSleepChange() {
-    localStorage.setItem('claude-usage-sleep-start', document.getElementById('sleep-start').value);
-    localStorage.setItem('claude-usage-sleep-end', document.getElementById('sleep-end').value);
-    updateFeasibilityRow();
-    run({ skipAutoPace: true });
-  }
-  if (startSel) startSel.addEventListener('change', onSleepChange);
-  if (endSel) endSel.addEventListener('change', onSleepChange);
-}
-
 const SHOW_PRICING_KEY = 'claude-usage-show-pricing';
 const SHOW_PRACTICES_KEY = 'claude-usage-show-practices';
 
@@ -215,7 +183,7 @@ document.getElementById('btn-pricing-toggle').addEventListener('click', function
 });
 
 document.addEventListener('DOMContentLoaded', function() {
-  buildSleepOptions();
+  getElements();
   const stored = localStorage.getItem(SHOW_SESSION_KEY);
   setSessionVisible(stored === '1');
   updateAlarmButtonLabel();
