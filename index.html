@@ -108,6 +108,58 @@
 
     <div id="history-panel"></div>
 
+    <div class="pricing-reference">
+      <button id="btn-pricing-toggle" class="pricing-toggle-btn">📊 Model Pricing Reference</button>
+      <div id="pricing-content" class="pricing-content" style="display: none;">
+        <h3>Claude Pro Session Capacity by Model</h3>
+        <div class="pricing-grid">
+          <div class="pricing-card">
+            <div class="pricing-model">Haiku 4.5</div>
+            <div class="pricing-cost">~30% of Sonnet cost</div>
+            <div class="pricing-details">
+              <div class="pricing-metric">
+                <span class="metric-label">Per 5-hour window:</span>
+                <span class="metric-value">~150 messages</span>
+              </div>
+              <div class="pricing-metric">
+                <span class="metric-label">Weekly capacity:</span>
+                <span class="metric-value">~36–44 full sessions</span>
+              </div>
+            </div>
+          </div>
+          <div class="pricing-card">
+            <div class="pricing-model">Sonnet 4.6</div>
+            <div class="pricing-cost">baseline</div>
+            <div class="pricing-details">
+              <div class="pricing-metric">
+                <span class="metric-label">Per 5-hour window:</span>
+                <span class="metric-value">~45 messages</span>
+              </div>
+              <div class="pricing-metric">
+                <span class="metric-label">Weekly capacity:</span>
+                <span class="metric-value">~9–11 full sessions</span>
+              </div>
+            </div>
+          </div>
+          <div class="pricing-card">
+            <div class="pricing-model">Opus 4.6</div>
+            <div class="pricing-cost">3–5x Sonnet cost</div>
+            <div class="pricing-details">
+              <div class="pricing-metric">
+                <span class="metric-label">Per 5-hour window:</span>
+                <span class="metric-value">~9–15 messages</span>
+              </div>
+              <div class="pricing-metric">
+                <span class="metric-label">Weekly capacity:</span>
+                <span class="metric-value">~2–3 peak / ~4–6 off-peak</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="pricing-note">Numbers are estimates based on typical usage patterns. See docs/pricing-info.md for details.</p>
+      </div>
+    </div>
+
     <script src="parser.js"></script>
     <script src="stats.js"></script>
     <script src="history.js"></script>

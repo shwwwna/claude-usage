@@ -197,11 +197,25 @@ function buildSleepOptions() {
   if (endSel) endSel.addEventListener('change', onSleepChange);
 }
 
+const SHOW_PRICING_KEY = 'claude-usage-show-pricing';
+
+document.getElementById('btn-pricing-toggle').addEventListener('click', function() {
+  const content = document.getElementById('pricing-content');
+  const isVisible = content.style.display !== 'none';
+  content.style.display = isVisible ? 'none' : 'block';
+  localStorage.setItem(SHOW_PRICING_KEY, isVisible ? '0' : '1');
+});
+
 document.addEventListener('DOMContentLoaded', function() {
   buildSleepOptions();
   const stored = localStorage.getItem(SHOW_SESSION_KEY);
   setSessionVisible(stored === '1');
   updateAlarmButtonLabel();
+
+  const pricingStored = localStorage.getItem(SHOW_PRICING_KEY);
+  if (pricingStored === '1') {
+    document.getElementById('pricing-content').style.display = 'block';
+  }
 
   const last = loadLastInput();
   if (last) {

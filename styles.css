@@ -758,3 +758,105 @@ body.session-hidden .suggestion-item[data-type="session"] {
 .windows-item-sleep .windows-range .windows-duration {
   color: #666;
 }
+
+.pricing-reference {
+  width: 100%;
+  max-width: 960px;
+  margin-top: 1rem;
+}
+
+.pricing-toggle-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background: #1c1c1f;
+  border: 1px solid #333;
+  color: #e8e8ed;
+  font-size: 0.95rem;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.pricing-toggle-btn:hover {
+  background: #26262a;
+  border-color: #444;
+}
+
+.pricing-toggle-btn:active {
+  background: #1c1c1f;
+}
+
+.pricing-content {
+  margin-top: 1rem;
+  padding: 1.5rem;
+  background: #1c1c1f;
+  border: 1px solid #333;
+  border-radius: 4px;
+}
+
+.pricing-content h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 1rem;
+}
+
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.pricing-card {
+  padding: 1rem;
+  background: #26262a;
+  border: 1px solid #3a3a3f;
+  border-radius: 4px;
+}
+
+.pricing-model {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e8e8ed;
+  margin-bottom: 0.25rem;
+}
+
+.pricing-cost {
+  font-size: 0.85rem;
+  color: #999;
+  margin-bottom: 0.75rem;
+  font-style: italic;
+}
+
+.pricing-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pricing-metric {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.metric-label {
+  color: #999;
+  flex: 1;
+}
+
+.metric-value {
+  color: #c7d2fe;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.pricing-note {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 0.5rem;
+}
