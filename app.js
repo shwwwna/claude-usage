@@ -198,6 +198,14 @@ function buildSleepOptions() {
 }
 
 const SHOW_PRICING_KEY = 'claude-usage-show-pricing';
+const SHOW_PRACTICES_KEY = 'claude-usage-show-practices';
+
+document.getElementById('btn-practices-toggle').addEventListener('click', function() {
+  const content = document.getElementById('practices-content');
+  const isVisible = content.style.display !== 'none';
+  content.style.display = isVisible ? 'none' : 'block';
+  localStorage.setItem(SHOW_PRACTICES_KEY, isVisible ? '0' : '1');
+});
 
 document.getElementById('btn-pricing-toggle').addEventListener('click', function() {
   const content = document.getElementById('pricing-content');
@@ -215,6 +223,11 @@ document.addEventListener('DOMContentLoaded', function() {
   const pricingStored = localStorage.getItem(SHOW_PRICING_KEY);
   if (pricingStored === '1') {
     document.getElementById('pricing-content').style.display = 'block';
+  }
+
+  const practicesStored = localStorage.getItem(SHOW_PRACTICES_KEY);
+  if (practicesStored === '1') {
+    document.getElementById('practices-content').style.display = 'block';
   }
 
   const last = loadLastInput();

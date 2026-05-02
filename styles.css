@@ -759,13 +759,14 @@ body.session-hidden .suggestion-item[data-type="session"] {
   color: #666;
 }
 
+.best-practices-reference,
 .pricing-reference {
   width: 100%;
   max-width: 960px;
   margin-top: 1rem;
 }
 
-.pricing-toggle-btn {
+.toggle-btn {
   width: 100%;
   padding: 0.75rem;
   background: #1c1c1f;
@@ -778,16 +779,16 @@ body.session-hidden .suggestion-item[data-type="session"] {
   font-weight: 500;
 }
 
-.pricing-toggle-btn:hover {
+.toggle-btn:hover {
   background: #26262a;
   border-color: #444;
 }
 
-.pricing-toggle-btn:active {
+.toggle-btn:active {
   background: #1c1c1f;
 }
 
-.pricing-content {
+.reference-content {
   margin-top: 1rem;
   padding: 1.5rem;
   background: #1c1c1f;
@@ -795,11 +796,16 @@ body.session-hidden .suggestion-item[data-type="session"] {
   border-radius: 4px;
 }
 
-.pricing-content h3 {
+.reference-content h3 {
   font-size: 1rem;
   font-weight: 600;
   color: #fff;
   margin-bottom: 1rem;
+  margin-top: 1.5rem;
+}
+
+.reference-content h3:first-child {
+  margin-top: 0;
 }
 
 .pricing-grid {
@@ -855,8 +861,66 @@ body.session-hidden .suggestion-item[data-type="session"] {
   white-space: nowrap;
 }
 
-.pricing-note {
+.reference-note {
   font-size: 0.85rem;
   color: #666;
-  margin-top: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+.section-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.info-block {
+  padding: 1rem;
+  background: #26262a;
+  border: 1px solid #3a3a3f;
+  border-radius: 4px;
+}
+
+.block-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #e8e8ed;
+  margin-bottom: 0.5rem;
+}
+
+.info-block p {
+  font-size: 0.9rem;
+  color: #999;
+  line-height: 1.4;
+}
+
+.practices-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.5rem 0;
+}
+
+.practices-list li {
+  padding: 0.75rem 0 0.75rem 1.5rem;
+  position: relative;
+  font-size: 0.95rem;
+  color: #d8d8e8;
+  line-height: 1.5;
+}
+
+.practices-list li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: #666;
+}
+
+.practices-list li strong {
+  color: #e8e8ed;
+  font-weight: 600;
+}
+
+.avoid-list li::before {
+  content: '✕';
+  color: #ef4444;
 }

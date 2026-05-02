@@ -108,9 +108,59 @@
 
     <div id="history-panel"></div>
 
+    <div class="best-practices-reference">
+      <button id="btn-practices-toggle" class="toggle-btn">💡 Quota Best Practices</button>
+      <div id="practices-content" class="reference-content" style="display: none;">
+        <h3>How the Quota System Works</h3>
+        <div class="section-group">
+          <div class="info-block">
+            <div class="block-title">Session & Weekly Limits</div>
+            <p>5-hour rolling session window + separate weekly cap. Claude.ai and Claude Code share the same pool.</p>
+          </div>
+          <div class="info-block">
+            <div class="block-title">Conversation Cost Escalation</div>
+            <p>Message 1 in a new conversation: ~500 tokens. Message 30 in same conversation: 40,000+ tokens (entire history re-processed each turn).</p>
+          </div>
+          <div class="info-block">
+            <div class="block-title">Peak Hours Impact</div>
+            <p>Peak hours (05:00–11:00 PT) reduce effective capacity. Off-peak usage allows higher throughput.</p>
+          </div>
+        </div>
+
+        <h3>High-Leverage Habits</h3>
+        <ul class="practices-list">
+          <li><strong>Start new conversations frequently</strong> — 5 conversations of 10 messages each cost far less than one 50-message conversation.</li>
+          <li><strong>Default to Sonnet</strong> — Opus costs 3–5x more. Use it only for complex reasoning, architecture, nuanced writing.</li>
+          <li><strong>Use Projects with cached documents</strong> — Upload reference materials once; they don't count against limits on reuse.</li>
+          <li><strong>Batch questions into single messages</strong> — Group related questions to reduce back-and-forth.</li>
+          <li><strong>Write complete prompts upfront</strong> — Include all context and constraints in one message.</li>
+          <li><strong>Keep CLAUDE.md lean (&lt;150 lines)</strong> — Every word loads on every session. Cut anything non-behavioral.</li>
+          <li><strong>Use /clear aggressively</strong> — Start fresh to avoid old history eating tokens.</li>
+          <li><strong>Use .claudeignore</strong> — Prevents Claude from reading unneeded files.</li>
+          <li><strong>Point to specific files, not whole repo</strong> — Scoping prevents hundreds of file reads.</li>
+          <li><strong>Use plan mode for non-trivial work</strong> — Prevents wrong paths and wasted tokens.</li>
+        </ul>
+
+        <h3>Anti-Patterns to Avoid</h3>
+        <ul class="practices-list avoid-list">
+          <li>Don't keep one mega-conversation — it re-sends full history every message.</li>
+          <li>Don't default to Opus for everything.</li>
+          <li>Don't re-paste documents — use Projects to cache them.</li>
+          <li>Don't send vague one-liners that need clarification rounds.</li>
+          <li>Don't let Claude explore the whole repo unscoped.</li>
+          <li>Don't overload CLAUDE.md with aspirational text.</li>
+          <li>Don't use @-file for large documents — reference paths instead.</li>
+          <li>Don't ignore the usage dashboard.</li>
+          <li>Don't run Claude Code in loops without rate-limit handling.</li>
+        </ul>
+
+        <p class="reference-note">Full guide available in docs/quota-best-practices.md</p>
+      </div>
+    </div>
+
     <div class="pricing-reference">
-      <button id="btn-pricing-toggle" class="pricing-toggle-btn">📊 Model Pricing Reference</button>
-      <div id="pricing-content" class="pricing-content" style="display: none;">
+      <button id="btn-pricing-toggle" class="toggle-btn">📊 Model Pricing Reference</button>
+      <div id="pricing-content" class="reference-content" style="display: none;">
         <h3>Claude Pro Session Capacity by Model</h3>
         <div class="pricing-grid">
           <div class="pricing-card">
