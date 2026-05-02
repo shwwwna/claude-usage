@@ -166,6 +166,46 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent, ses
   statusRow.appendChild(rhs);
   card.appendChild(statusRow);
 
+  if (label === 'Session') {
+    const remaining = 1 - actualPct / 100;
+    const models = [
+      { name: 'Haiku',  count: Math.round(remaining * 150) },
+      { name: 'Sonnet', count: Math.round(remaining * 45) },
+      { name: 'Opus',   count: Math.round(remaining * 12) },
+    ];
+
+    const msgsBlock = document.createElement('div');
+    msgsBlock.className = 'msgs-estimate-block';
+
+    const msgsHeading = document.createElement('div');
+    msgsHeading.className = 'stat-label';
+    msgsHeading.textContent = 'Est. msgs left';
+    msgsBlock.appendChild(msgsHeading);
+
+    const msgsList = document.createElement('div');
+    msgsList.className = 'msgs-estimate-list';
+
+    models.forEach(function(m) {
+      const row = document.createElement('div');
+      row.className = 'msgs-estimate-row';
+
+      const nameEl = document.createElement('span');
+      nameEl.className = 'msgs-model-name';
+      nameEl.textContent = m.name;
+
+      const countEl = document.createElement('span');
+      countEl.className = 'msgs-model-count';
+      countEl.textContent = m.count;
+
+      row.appendChild(nameEl);
+      row.appendChild(countEl);
+      msgsList.appendChild(row);
+    });
+
+    msgsBlock.appendChild(msgsList);
+    card.appendChild(msgsBlock);
+  }
+
   card.appendChild(buildUnifiedBar(actualPct, targetPct, status));
 
   card.appendChild(buildLegend(totalHours, hoursLeft, exponent, actualPct));

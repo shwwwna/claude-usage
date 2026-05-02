@@ -924,3 +924,34 @@ body.session-hidden .suggestion-item[data-type="session"] {
   content: '✕';
   color: #ef4444;
 }
+
+/* Est. msgs left block in Session card */
+.msgs-estimate-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.msgs-estimate-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.msgs-estimate-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.msgs-model-name {
+  font-size: 0.65rem;
+  color: #888;
+}
+
+.msgs-model-count {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #ccc;
+  font-variant-numeric: tabular-nums;
+}
