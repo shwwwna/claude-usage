@@ -80,33 +80,6 @@ function run(options) {
   }, CONFIG.DEBOUNCE_MS);
 }
 
-textarea.addEventListener('input', run);
-
-document.getElementById('btn-clear').addEventListener('click', function() {
-  textarea.value = '';
-  errorEl.textContent = '';
-  document.getElementById('results').innerHTML = '';
-  document.getElementById('suggestion').innerHTML = '';
-  renderHistory(loadHistory());
-});
-
-document.getElementById('btn-open-usage').addEventListener('click', function() {
-  if (navigator.windowControlsOverlay) {
-    window.open('https://claude.ai/settings/usage', 'claude-usage-window', 'popup,width=800,height=600');
-  } else {
-    window.open('https://claude.ai/settings/usage', '_blank');
-  }
-});
-
-document.getElementById('btn-paste').addEventListener('click', function() {
-  navigator.clipboard.readText().then(function(text) {
-    textarea.value = text;
-    run();
-  }).catch(function(err) {
-    errorEl.textContent = 'Paste failed: ' + (err && err.message ? err.message : 'clipboard access denied');
-  });
-});
-
 function setSessionVisible(visible) {
   document.body.classList.toggle('session-hidden', !visible);
   const btn = document.getElementById('btn-toggle-session');
@@ -114,33 +87,11 @@ function setSessionVisible(visible) {
   localStorage.setItem(SHOW_SESSION_KEY, visible ? '1' : '0');
 }
 
-document.getElementById('btn-toggle-session').addEventListener('click', function() {
-  setSessionVisible(document.body.classList.contains('session-hidden'));
-});
-
 function updateAlarmButtonLabel() {
   const btn = document.getElementById('btn-alarm-toggle');
   if (!btn) return;
   btn.textContent = isAlarmEnabled() ? '🔔 Alarm: on' : '🔔 Alarm: off';
 }
-
-document.getElementById('btn-alarm-toggle').addEventListener('click', function() {
-  const next = !isAlarmEnabled();
-  setAlarmEnabled(next);
-  updateAlarmButtonLabel();
-  if (next) {
-    try {
-      const raw = textarea.value;
-      if (raw.trim()) {
-        const parsed = parseUsageText(raw);
-        if (parsed.session) {
-          const resetMs = Date.now() + parsed.session.hoursLeft * 3600 * 1000;
-          scheduleSessionAlarm(resetMs);
-        }
-      }
-    } catch (e) {}
-  }
-});
 
 function exponentToLabel(v) {
   if (v <= 0.5)  return 'aggressive';
@@ -149,41 +100,91 @@ function exponentToLabel(v) {
   return 'conservative';
 }
 
-['session', 'weekly'].forEach(function(key) {
-  const slider = document.getElementById(key + '-exponent');
-  const label  = document.getElementById(key + '-exponent-label');
-  slider.addEventListener('input', function() {
-    const v = parseFloat(slider.value);
-    if (key === 'session') sessionExponent = v;
-    else weeklyExponent = v;
-    label.textContent = exponentToLabel(v);
-    run({ skipAutoPace: true });
-  });
-});
+const SHOW_PRICING_KEY = 'claude-usage-show-pricing';
+const SHOW_PRACTICES_KEY = 'claude-usage-show-practices';
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js');
 }
 
-const SHOW_PRICING_KEY = 'claude-usage-show-pricing';
-const SHOW_PRACTICES_KEY = 'claude-usage-show-practices';
-
-document.getElementById('btn-practices-toggle').addEventListener('click', function() {
-  const content = document.getElementById('practices-content');
-  const isVisible = content.style.display !== 'none';
-  content.style.display = isVisible ? 'none' : 'block';
-  localStorage.setItem(SHOW_PRACTICES_KEY, isVisible ? '0' : '1');
-});
-
-document.getElementById('btn-pricing-toggle').addEventListener('click', function() {
-  const content = document.getElementById('pricing-content');
-  const isVisible = content.style.display !== 'none';
-  content.style.display = isVisible ? 'none' : 'block';
-  localStorage.setItem(SHOW_PRICING_KEY, isVisible ? '0' : '1');
-});
-
 document.addEventListener('DOMContentLoaded', function() {
   getElements();
+
+  textarea.addEventListener('input', run);
+
+  document.getElementById('btn-clear').addEventListener('click', function() {
+    textarea.value = '';
+    errorEl.textContent = '';
+    document.getElementById('results').innerHTML = '';
+    document.getElementById('suggestion').innerHTML = '';
+    renderHistory(loadHistory());
+  });
+
+  document.getElementById('btn-open-usage').addEventListener('click', function() {
+    if (navigator.windowControlsOverlay) {
+      window.open('https://claude.ai/settings/usage', 'claude-usage-window', 'popup,width=800,height=600');
+    } else {
+      window.open('https://claude.ai/settings/usage', '_blank');
+    }
+  });
+
+  document.getElementById('btn-paste').addEventListener('click', function() {
+    navigator.clipboard.readText().then(function(text) {
+      textarea.value = text;
+      run();
+    }).catch(function(err) {
+      errorEl.textContent = 'Paste failed: ' + (err && err.message ? err.message : 'clipboard access denied');
+    });
+  });
+
+  document.getElementById('btn-toggle-session').addEventListener('click', function() {
+    setSessionVisible(document.body.classList.contains('session-hidden'));
+  });
+
+  document.getElementById('btn-alarm-toggle').addEventListener('click', function() {
+    const next = !isAlarmEnabled();
+    setAlarmEnabled(next);
+    updateAlarmButtonLabel();
+    if (next) {
+      try {
+        const raw = textarea.value;
+        if (raw.trim()) {
+          const parsed = parseUsageText(raw);
+          if (parsed.session) {
+            const resetMs = Date.now() + parsed.session.hoursLeft * 3600 * 1000;
+            scheduleSessionAlarm(resetMs);
+          }
+        }
+      } catch (e) {}
+    }
+  });
+
+  ['session', 'weekly'].forEach(function(key) {
+    const slider = document.getElementById(key + '-exponent');
+    const label = document.getElementById(key + '-exponent-label');
+    slider.addEventListener('input', function() {
+      const v = parseFloat(slider.value);
+      if (key === 'session') sessionExponent = v;
+      else weeklyExponent = v;
+      label.textContent = exponentToLabel(v);
+      run({ skipAutoPace: true });
+    });
+  });
+
+  document.getElementById('btn-practices-toggle').addEventListener('click', function() {
+    const content = document.getElementById('practices-content');
+    const isVisible = content.style.display !== 'none';
+    content.style.display = isVisible ? 'none' : 'block';
+    localStorage.setItem(SHOW_PRACTICES_KEY, isVisible ? '0' : '1');
+  });
+
+  document.getElementById('btn-pricing-toggle').addEventListener('click', function() {
+    const content = document.getElementById('pricing-content');
+    const isVisible = content.style.display !== 'none';
+    content.style.display = isVisible ? 'none' : 'block';
+    localStorage.setItem(SHOW_PRICING_KEY, isVisible ? '0' : '1');
+  });
+
   const stored = localStorage.getItem(SHOW_SESSION_KEY);
   setSessionVisible(stored === '1');
   updateAlarmButtonLabel();
