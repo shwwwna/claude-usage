@@ -94,6 +94,12 @@ button:hover { background: #3a3a3e; color: #fff; }
   gap: 1rem;
 }
 
+body.session-hidden .card[data-type="session"],
+body.session-hidden .pacing-row[data-type="session"],
+body.session-hidden .suggestion-item[data-type="session"] {
+  display: none;
+}
+
 .card {
   background: #1c1c1f;
   border: 1px solid #2a2a2e;

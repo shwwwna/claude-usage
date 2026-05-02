@@ -138,31 +138,42 @@ function importJSON(file) {
 }
 
 function groupBySession(entries) {
-  const bySessionId = {};
+  const TOLERANCE_MS = 5 * 60 * 1000;
+  const grouped = [];
 
   entries.forEach(function(e) {
-    const id = e.sessionId || 'unknown';
-    if (!bySessionId[id]) {
-      bySessionId[id] = [];
+    let placed = false;
+    for (let i = 0; i < grouped.length; i++) {
+      const g = grouped[i];
+      const maxTs = Math.max.apply(null, g.map(function(x) { return x.ts; }));
+      if (Math.abs(e.ts - maxTs) <= TOLERANCE_MS) {
+        g.push(e);
+        placed = true;
+        break;
+      }
     }
-    bySessionId[id].push(e);
+    if (!placed) {
+      grouped.push([e]);
+    }
   });
 
-  const grouped = Object.values(bySessionId).map(function(sessionEntries) {
-    const minTs = Math.min.apply(null, sessionEntries.map(function(e) { return e.ts; }));
-    const maxTs = Math.max.apply(null, sessionEntries.map(function(e) { return e.ts; }));
-    return {
-      sessionId: sessionEntries[0].sessionId || 'unknown',
-      entries: sessionEntries.sort(function(a, b) { return a.ts - b.ts; }),
-      startTime: minTs,
-      endTime: maxTs,
-      durationMs: maxTs - minTs
-    };
-  });
-
-  return grouped.sort(function(a, b) {
-    return a.endTime - b.endTime;
-  });
+  return grouped
+    .sort(function(a, b) {
+      const aEndTs = Math.max.apply(null, a.map(function(e) { return e.ts; }));
+      const bEndTs = Math.max.apply(null, b.map(function(e) { return e.ts; }));
+      return aEndTs - bEndTs;
+    })
+    .map(function(sessionEntries) {
+      const minTs = Math.min.apply(null, sessionEntries.map(function(e) { return e.ts; }));
+      const maxTs = Math.max.apply(null, sessionEntries.map(function(e) { return e.ts; }));
+      return {
+        sessionId: sessionEntries[0].sessionId || 'unknown',
+        entries: sessionEntries.sort(function(a, b) { return a.ts - b.ts; }),
+        startTime: minTs,
+        endTime: maxTs,
+        durationMs: maxTs - minTs
+      };
+    });
 }
 
 function analyzeHistory(entries) {
