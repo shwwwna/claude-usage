@@ -137,6 +137,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
+
   document.getElementById('btn-toggle-session').addEventListener('click', function() {
     setSessionVisible(document.body.classList.contains('session-hidden'));
   });
