@@ -690,66 +690,10 @@ function renderHistory(entries) {
   analysisEl.textContent = parts.length ? '7-day avg: ' + parts.join(', ') : '';
   container.appendChild(analysisEl);
 
-  container.appendChild(buildChart(entries));
   container.appendChild(buildHistoryTable(entries));
   container.appendChild(buildHistoryButtons());
 }
 
-function buildChart(entries) {
-  const W = 400, H = 120, PAD = 10;
-  const plotW = W - PAD * 2;
-  const plotH = H - PAD * 2;
-
-  const ns = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(ns, 'svg');
-  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
-  svg.setAttribute('class', 'history-chart');
-
-  const minTs = entries[0].ts;
-  const maxTs = entries[entries.length - 1].ts;
-  const tsRange = maxTs - minTs || 1;
-
-  function toX(ts) { return PAD + ((ts - minTs) / tsRange) * plotW; }
-  function toY(pct) { return PAD + (1 - pct / 100) * plotH; }
-
-  function makeLine(key, cls) {
-    const points = entries
-      .filter(function(e) { return e[key] != null; })
-      .map(function(e) { return toX(e.ts) + ',' + toY(e[key]); })
-      .join(' ');
-    if (!points) return;
-    const poly = document.createElementNS(ns, 'polyline');
-    poly.setAttribute('points', points);
-    poly.setAttribute('class', cls);
-    svg.appendChild(poly);
-
-    entries.filter(function(e) { return e[key] != null; }).forEach(function(e) {
-      const circle = document.createElementNS(ns, 'circle');
-      circle.setAttribute('cx', toX(e.ts));
-      circle.setAttribute('cy', toY(e[key]));
-      circle.setAttribute('r', '3');
-      circle.setAttribute('class', cls + '-dot');
-      svg.appendChild(circle);
-    });
-  }
-
-  makeLine('sessionPct', 'chart-session');
-  makeLine('weeklyPct', 'chart-weekly');
-
-  const dateWrap = document.createElement('div');
-  dateWrap.className = 'chart-dates';
-  const d1 = new Date(minTs);
-  const d2 = new Date(maxTs);
-  dateWrap.innerHTML =
-    '<span>' + d1.toLocaleDateString() + '</span>' +
-    '<span>' + d2.toLocaleDateString() + '</span>';
-
-  const wrap = document.createElement('div');
-  wrap.className = 'chart-wrap';
-  wrap.appendChild(svg);
-  wrap.appendChild(dateWrap);
-  return wrap;
-}
 
 function buildHistoryTable(entries) {
   const sessions = groupBySession(entries);
@@ -765,7 +709,6 @@ function buildHistoryTable(entries) {
     const sessionHeader = document.createElement('div');
     sessionHeader.className = 'session-header';
 
-    const startDate = new Date(session.startTime);
     const endDate = new Date(session.endTime);
     const durationMin = Math.round(session.durationMs / 60000);
     const durationHours = Math.floor(durationMin / 60);
@@ -774,7 +717,7 @@ function buildHistoryTable(entries) {
       ? durationHours + 'h ' + durationMins + 'm'
       : durationMins + 'm';
 
-    const dateStr = startDate.toLocaleDateString() + ' ' + startDate.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    const dateStr = endDate.toLocaleDateString() + ' ' + endDate.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
     const durationEl = document.createElement('span');
     durationEl.className = 'session-duration';
     durationEl.textContent = '(' + durationStr + ')';
