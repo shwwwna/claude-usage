@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Claude Usage Tracker</title>
     <link rel="manifest" href="manifest.json" />
-    <link rel="icon" href="public/icons/icon.svg" type="image/svg+xml" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
     <meta name="theme-color" content="#0f0f11" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Claude Usage" />
@@ -302,6 +302,50 @@
         .live-clock { @apply text-center; letter-spacing: 0.02em; margin: 0.5rem 0; }
         .live-clock .clock-day { @apply text-muted3 font-medium; font-size: 2.5rem; }
         .live-clock .clock-time { @apply font-bold tabular-nums; font-size: 4.5rem; }
+
+        /* Accordion content h3 */
+        #practices-content h3,
+        #pricing-content h3 {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #fff;
+          margin-bottom: 1rem;
+          margin-top: 1.5rem;
+        }
+        #practices-content h3:first-child,
+        #pricing-content h3:first-child { margin-top: 0; }
+
+        /* Practices list */
+        .practices-list { list-style: none; padding: 0; margin: 0 0 1.5rem 0; }
+        .practices-list li {
+          padding: 0.75rem 0 0.75rem 1.5rem;
+          position: relative;
+          font-size: 0.95rem;
+          color: #d8d8e8;
+          line-height: 1.5;
+        }
+        .practices-list li::before { content: '→'; position: absolute; left: 0; color: #666; }
+        .practices-list li strong { color: #e8e8ed; font-weight: 600; }
+        .avoid-list li::before { content: '✕'; color: #ef4444; }
+
+        /* Notes */
+        .reference-note,
+        .pricing-note { font-size: 0.85rem; color: #666; margin-top: 1rem; }
+
+        /* Range input sliders */
+        input[type=range] {
+          flex: 1;
+          accent-color: #6366f1;
+          cursor: pointer;
+        }
+
+        /* Pacing cards bullets */
+        .grid.grid-cols-4 > div ul li::before {
+          content: '→ ';
+          color: #6366f1;
+          font-weight: 600;
+          margin-right: 0.3rem;
+        }
       }
     </style>
   </head>
@@ -317,6 +361,7 @@
         <button id="btn-open-usage">⬡ Open Claude Usage</button>
         <button id="btn-paste">Paste</button>
         <button id="btn-clear">Clear</button>
+        <button id="btn-toggle-session">Show session calculation</button>
         <button id="btn-alarm-toggle">🔔 Alarm: off</button>
       </div>
     </div>
@@ -359,7 +404,7 @@
         <div class="flex flex-col gap-2 p-4 rounded-xl border border-border bg-gradient-to-br from-surface to-base">
           <div class="text-indigo-light uppercase tracking-wide" style="font-size: 0.85rem;">Aggressive</div>
           <div class="text-muted3 italic" style="font-size: 0.75rem;">Use most of your quota early</div>
-          <ul class="flex flex-col gap-1 list-none text-muted2" style="font-size: 0.75rem;">
+          <ul class="flex flex-col gap-1 text-muted2" style="font-size: 0.75rem; list-style: none; padding: 0; margin: 0;">
             <li>Heavy usage planned for today/early in the week</li>
             <li>Need fast iteration on urgent work</li>
             <li>Know you'll have lighter usage later</li>
@@ -368,7 +413,7 @@
         <div class="flex flex-col gap-2 p-4 rounded-xl border border-border bg-gradient-to-br from-surface to-base">
           <div class="text-indigo-light uppercase tracking-wide" style="font-size: 0.85rem;">Front-loaded</div>
           <div class="text-muted3 italic" style="font-size: 0.75rem;">Slightly skew toward early usage</div>
-          <ul class="flex flex-col gap-1 list-none text-muted2" style="font-size: 0.75rem;">
+          <ul class="flex flex-col gap-1 text-muted2" style="font-size: 0.75rem; list-style: none; padding: 0; margin: 0;">
             <li>Plan to work more early, taper off later</li>
             <li>Natural daily/weekly rhythm with productivity peaks</li>
             <li>Most common for balanced workflows (default)</li>
@@ -379,7 +424,7 @@
           <div class="text-muted3 italic" style="font-size: 0.75rem;">
             Nearly even, slight preference for later
           </div>
-          <ul class="flex flex-col gap-1 list-none text-muted2" style="font-size: 0.75rem;">
+          <ul class="flex flex-col gap-1 text-muted2" style="font-size: 0.75rem; list-style: none; padding: 0; margin: 0;">
             <li>Want flexibility and steady usage throughout</li>
             <li>No strong pattern of high or low periods</li>
             <li>Prefer not to rush early on</li>
@@ -390,7 +435,7 @@
           <div class="text-muted3 italic" style="font-size: 0.75rem;">
             Spread usage evenly across the period
           </div>
-          <ul class="flex flex-col gap-1 list-none text-muted2" style="font-size: 0.75rem;">
+          <ul class="flex flex-col gap-1 text-muted2" style="font-size: 0.75rem; list-style: none; padding: 0; margin: 0;">
             <li>Uncertain about upcoming workload</li>
             <li>Want maximum flexibility in usage timing</li>
             <li>Prefer to save quota for later just in case</li>
@@ -509,6 +554,5 @@
     <script src="src/alarm.js"></script>
     <script src="src/renderer.js"></script>
     <script src="src/app.js"></script>
-    <script defer src="src/alpine.min.js"></script>
   </body>
 </html>
