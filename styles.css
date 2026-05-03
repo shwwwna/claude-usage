@@ -129,6 +129,8 @@ body.session-hidden .suggestion-item[data-type="session"] {
 
 .stat-value { font-size: 1rem; font-weight: 600; font-variant-numeric: tabular-nums; }
 
+.stat-explainer { font-size: 0.65rem; color: #666; margin-top: -0.25rem; }
+
 .badge {
   display: inline-block;
   font-size: 0.7rem;

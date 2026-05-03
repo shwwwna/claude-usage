@@ -138,6 +138,11 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent, ses
     weeklyCompactRow.appendChild(sessCell);
     card.appendChild(weeklyCompactRow);
 
+    const sessExplainer = document.createElement('div');
+    sessExplainer.className = 'stat-explainer';
+    sessExplainer.textContent = 'Full 5-hour sessions you can complete vs. total windows until reset';
+    card.appendChild(sessExplainer);
+
     if (sessionData) {
       const feasPlaceholder = document.createElement('div');
       feasPlaceholder.id = 'weekly-feasibility-row';
@@ -709,18 +714,28 @@ function buildHistoryTable(entries) {
     const sessionHeader = document.createElement('div');
     sessionHeader.className = 'session-header';
 
-    const endDate = new Date(session.endTime);
-    const durationMin = Math.round(session.durationMs / 60000);
-    const durationHours = Math.floor(durationMin / 60);
-    const durationMins = durationMin % 60;
-    const durationStr = durationHours > 0
-      ? durationHours + 'h ' + durationMins + 'm'
-      : durationMins + 'm';
+    const resetDate = new Date(session.resetTime);
+    const recordedDurationMin = Math.round(session.durationMs / 60000);
+    const recordedDurationHours = Math.floor(recordedDurationMin / 60);
+    const recordedDurationMins = recordedDurationMin % 60;
+    const recordedDurationStr = recordedDurationHours > 0
+      ? recordedDurationHours + 'h ' + recordedDurationMins + 'm'
+      : recordedDurationMins + 'm';
 
-    const dateStr = endDate.toLocaleDateString() + ' ' + endDate.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const month = resetDate.getMonth() + 1;
+    const day = resetDate.getDate();
+    const dayName = DAYS[resetDate.getDay()];
+    const h = resetDate.getHours();
+    const m = resetDate.getMinutes();
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    const mm = m < 10 ? '0' + m : m;
+    const dateStr = month + '/' + day + ' ' + dayName + ' ' + h12 + ':' + mm + ' ' + ampm;
+
     const durationEl = document.createElement('span');
     durationEl.className = 'session-duration';
-    durationEl.textContent = '(' + durationStr + ')';
+    durationEl.textContent = '(' + recordedDurationStr + ')';
 
     sessionHeader.innerHTML = '<span class="session-date">' + dateStr + '</span>';
     sessionHeader.appendChild(durationEl);

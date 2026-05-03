@@ -166,11 +166,16 @@ function groupBySession(entries) {
     .map(function(sessionEntries) {
       const minTs = Math.min.apply(null, sessionEntries.map(function(e) { return e.ts; }));
       const maxTs = Math.max.apply(null, sessionEntries.map(function(e) { return e.ts; }));
+      const lastEntry = sessionEntries[sessionEntries.length - 1];
+      const resetTimeMs = lastEntry.sessionHoursLeft !== null
+        ? lastEntry.ts + (lastEntry.sessionHoursLeft * 3600 * 1000)
+        : maxTs;
       return {
         sessionId: sessionEntries[0].sessionId || 'unknown',
         entries: sessionEntries.sort(function(a, b) { return a.ts - b.ts; }),
         startTime: minTs,
         endTime: maxTs,
+        resetTime: resetTimeMs,
         durationMs: maxTs - minTs
       };
     });
