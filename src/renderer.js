@@ -298,11 +298,38 @@ function buildLegend(totalHours, hoursLeft, exponent, actualPct) {
   const curveNow = Math.pow(actualPct / 100, 1 / e);
   const curveEnd = 1;
 
-  [10,20,30,40,50,60,70,80,90,100].forEach(function(m) {
+  function fmtDateStr(date) {
+    if (date.toDateString() === today) {
+      const h = date.getHours();
+      const min = date.getMinutes();
+      const ampm = h >= 12 ? 'pm' : 'am';
+      const h12 = h % 12 || 12;
+      const mm = min < 10 ? '0' + min : min;
+      return h12 + ':' + mm + ampm;
+    } else {
+      const h = date.getHours();
+      const ampm = h >= 12 ? 'pm' : 'am';
+      const h12 = h % 12 || 12;
+      return DAYS[date.getDay()] + ' ' + h12 + ampm;
+    }
+  }
+
+  // Pre-compute 80% and 90% hit times to extrapolate 100% linearly
+  function computeHitMs(m) {
     const isPast = m <= actualPct;
-    const hitMs = isPast
+    return isPast
       ? windowStartMs + Math.pow(m / 100, 1 / e) * totalMs
       : now + ((Math.pow(m / 100, 1 / e) - curveNow) / (curveEnd - curveNow)) * remainingMs;
+  }
+  const hit80Ms = computeHitMs(80);
+  const hit90Ms = computeHitMs(90);
+  const hit100MsExtrapolated = hit90Ms + (hit90Ms - hit80Ms);
+
+  [10,20,30,40,50,60,70,80,90,100].forEach(function(m) {
+    const isPast = m <= actualPct;
+    const hitMs = m === 100
+      ? (isPast ? computeHitMs(100) : hit100MsExtrapolated)
+      : computeHitMs(m);
     const hitDate = new Date(hitMs);
 
     const item = document.createElement('div');
@@ -314,24 +341,9 @@ function buildLegend(totalHours, hoursLeft, exponent, actualPct) {
     item.appendChild(pctEl);
 
     if (!isPast) {
-      let dateStr;
-      if (hitDate.toDateString() === today) {
-        const h = hitDate.getHours();
-        const min = hitDate.getMinutes();
-        const ampm = h >= 12 ? 'pm' : 'am';
-        const h12 = h % 12 || 12;
-        const mm = min < 10 ? '0' + min : min;
-        dateStr = h12 + ':' + mm + ampm;
-      } else {
-        const h = hitDate.getHours();
-        const ampm = h >= 12 ? 'pm' : 'am';
-        const h12 = h % 12 || 12;
-        dateStr = DAYS[hitDate.getDay()] + ' ' + h12 + ampm;
-      }
-
       const dateEl = document.createElement('div');
       dateEl.className = 'bar-legend-date';
-      dateEl.textContent = dateStr;
+      dateEl.textContent = fmtDateStr(hitDate);
       item.appendChild(dateEl);
 
       const leftEl = document.createElement('div');
@@ -342,6 +354,29 @@ function buildLegend(totalHours, hoursLeft, exponent, actualPct) {
 
     legend.appendChild(item);
   });
+
+  // Add actual reset deadline as a separate row
+  const resetMs = now + hoursLeft * 3600 * 1000;
+  const resetDate = new Date(resetMs);
+  const resetItem = document.createElement('div');
+  resetItem.className = 'bar-legend-item bar-legend-reset';
+
+  const resetPctEl = document.createElement('div');
+  resetPctEl.className = 'bar-legend-pct';
+  resetPctEl.textContent = 'Reset';
+  resetItem.appendChild(resetPctEl);
+
+  const resetDateEl = document.createElement('div');
+  resetDateEl.className = 'bar-legend-date';
+  resetDateEl.textContent = fmtDateStr(resetDate);
+  resetItem.appendChild(resetDateEl);
+
+  const resetLeftEl = document.createElement('div');
+  resetLeftEl.className = 'bar-legend-left';
+  resetLeftEl.textContent = fmtLeft(resetMs - now);
+  resetItem.appendChild(resetLeftEl);
+
+  legend.appendChild(resetItem);
 
   return legend;
 }
@@ -384,10 +419,22 @@ function buildSleepAndWindowsCard(hoursLeft, resetMs, sessionStartMs) {
   card.className = 'card';
   card.dataset.type = 'sleep-windows';
 
+  const titleRow = document.createElement('div');
+  titleRow.className = 'card-title-row';
+
   const title = document.createElement('div');
   title.className = 'card-title';
   title.textContent = 'Sleep & Windows';
-  card.appendChild(title);
+  titleRow.appendChild(title);
+
+  const chevron = document.createElement('span');
+  chevron.className = 'card-chevron';
+  titleRow.appendChild(chevron);
+
+  card.appendChild(titleRow);
+
+  const cardBody = document.createElement('div');
+  cardBody.className = 'card-body';
 
   const sleepRow = document.createElement('div');
   sleepRow.className = 'sleep-row';
@@ -430,13 +477,13 @@ function buildSleepAndWindowsCard(hoursLeft, resetMs, sessionStartMs) {
   }
   sleepRow.appendChild(endSelect);
 
-  card.appendChild(sleepRow);
+  cardBody.appendChild(sleepRow);
 
   let windowsContainer = build5hrWindows(hoursLeft, resetMs, sessionStartMs);
 
   function updateWindows() {
     const newWindows = build5hrWindows(hoursLeft, resetMs, sessionStartMs);
-    card.replaceChild(newWindows, windowsContainer);
+    cardBody.replaceChild(newWindows, windowsContainer);
     windowsContainer = newWindows;
     updateFeasibilityRow();
   }
@@ -444,7 +491,22 @@ function buildSleepAndWindowsCard(hoursLeft, resetMs, sessionStartMs) {
   startSelect.addEventListener('change', updateWindows);
   endSelect.addEventListener('change', updateWindows);
 
-  card.appendChild(windowsContainer);
+  cardBody.appendChild(windowsContainer);
+  card.appendChild(cardBody);
+
+  const SHOW_SLEEP_WINDOWS_KEY = 'claude-usage-show-sleep-windows';
+  const savedState = localStorage.getItem(SHOW_SLEEP_WINDOWS_KEY);
+  const isExpanded = savedState !== '0';
+  cardBody.style.display = isExpanded ? '' : 'none';
+  chevron.textContent = isExpanded ? ' ▼' : ' ▶';
+
+  titleRow.style.cursor = 'pointer';
+  titleRow.addEventListener('click', function() {
+    const nowExpanded = cardBody.style.display !== 'none';
+    cardBody.style.display = nowExpanded ? 'none' : '';
+    chevron.textContent = nowExpanded ? ' ▶' : ' ▼';
+    localStorage.setItem(SHOW_SLEEP_WINDOWS_KEY, nowExpanded ? '0' : '1');
+  });
 
   return card;
 }
@@ -550,53 +612,67 @@ function build5hrWindows(hoursLeft, resetMs, sessionStartMs) {
   header.appendChild(totalHoursEl);
   container.appendChild(header);
 
-  const list = document.createElement('div');
-  list.className = 'windows-items';
-
-  let currentDay = null;
-  let awakeWindowCount = 0;
-  windows.forEach(function(w, i) {
+  // Group windows by day
+  const dayGroups = [];
+  const dayMap = {};
+  windows.forEach(function(w) {
     const dayKey = DAYS[w.start.getDay()];
-    if (dayKey !== currentDay) {
-      currentDay = dayKey;
-      const dayEl = document.createElement('div');
-      dayEl.className = 'windows-day';
-      dayEl.textContent = dayKey;
-      list.appendChild(dayEl);
+    if (!dayMap[dayKey]) {
+      dayMap[dayKey] = [];
+      dayGroups.push({ day: dayKey, items: dayMap[dayKey] });
     }
-
-    const item = document.createElement('div');
-    item.className = 'windows-item' + (w.asleep ? ' windows-item-sleep' : '');
-
-    const num = document.createElement('span');
-    num.className = 'windows-num';
-    if (w.asleep) {
-      num.textContent = '';
-    } else {
-      awakeWindowCount++;
-      num.textContent = awakeWindowCount + '.';
-    }
-
-    const durationMs = w.end.getTime() - w.start.getTime();
-    const durationHours = Math.round(durationMs / (3600 * 1000));
-
-    const range = document.createElement('span');
-    range.className = 'windows-range';
-    range.textContent = fmtTime(w.start) + '–' + fmtTime(w.end);
-
-    if (durationHours !== 5) {
-      const durationSpan = document.createElement('span');
-      durationSpan.className = 'windows-duration';
-      durationSpan.textContent = ' (' + durationHours + 'h)';
-      range.appendChild(durationSpan);
-    }
-
-    item.appendChild(num);
-    item.appendChild(range);
-    list.appendChild(item);
+    dayMap[dayKey].push(w);
   });
 
-  container.appendChild(list);
+  const grid = document.createElement('div');
+  grid.className = 'windows-grid';
+
+  let awakeWindowCount = 0;
+  dayGroups.forEach(function(group) {
+    const col = document.createElement('div');
+    col.className = 'windows-col';
+
+    const dayEl = document.createElement('div');
+    dayEl.className = 'windows-day';
+    dayEl.textContent = group.day;
+    col.appendChild(dayEl);
+
+    group.items.forEach(function(w) {
+      const item = document.createElement('div');
+      item.className = 'windows-item' + (w.asleep ? ' windows-item-sleep' : '');
+
+      const num = document.createElement('span');
+      num.className = 'windows-num';
+      if (w.asleep) {
+        num.textContent = '';
+      } else {
+        awakeWindowCount++;
+        num.textContent = awakeWindowCount + '.';
+      }
+
+      const durationMs = w.end.getTime() - w.start.getTime();
+      const durationHours = Math.round(durationMs / (3600 * 1000));
+
+      const range = document.createElement('span');
+      range.className = 'windows-range';
+      range.textContent = fmtTime(w.start) + '–' + fmtTime(w.end);
+
+      if (durationHours !== 5) {
+        const durationSpan = document.createElement('span');
+        durationSpan.className = 'windows-duration';
+        durationSpan.textContent = ' (' + durationHours + 'h)';
+        range.appendChild(durationSpan);
+      }
+
+      item.appendChild(num);
+      item.appendChild(range);
+      col.appendChild(item);
+    });
+
+    grid.appendChild(col);
+  });
+
+  container.appendChild(grid);
   return container;
 }
 

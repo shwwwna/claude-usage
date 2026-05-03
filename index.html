@@ -174,13 +174,24 @@
           background: rgba(255,255,255,0.35);
         }
 
+        /* Cards - accordion support */
+        .card-title-row { @apply flex justify-between items-center; }
+        .card-chevron { @apply text-muted4; font-size: 0.65rem; }
+
         /* Bar legend */
-        .bar-legend { @apply grid grid-cols-10 w-full; }
+        .bar-legend { @apply grid w-full; grid-template-columns: repeat(10, 1fr); }
         .bar-legend-item { @apply flex flex-col items-center; }
         .bar-legend-item.legend-past { @apply line-through text-muted5; }
+        .bar-legend-item.bar-legend-reset {
+          grid-column: 10;
+          grid-row: 2;
+          @apply flex flex-col items-center border-t border-muted5 pt-1;
+          margin-top: 0.15rem;
+        }
         .bar-legend-pct { @apply tabular-nums text-legend-bright; font-size: 0.6rem; }
         .bar-legend-date { @apply tabular-nums text-legend-mid; font-size: 0.55rem; }
         .bar-legend-left { @apply tabular-nums text-legend-dim; font-size: 0.5rem; }
+        .bar-legend-reset .bar-legend-pct { @apply text-muted3; }
 
         /* Sleep controls */
         .sleep-row { @apply flex items-center gap-2 text-muted3; font-size: 0.75rem; }
@@ -196,12 +207,18 @@
         .windows-list { @apply flex flex-col gap-1; }
         .windows-header { @apply flex justify-between items-baseline; }
         .windows-total { @apply text-muted5; font-size: 0.65rem; }
-        .windows-items { @apply flex flex-col; gap: 0.1rem; }
-        .windows-day { @apply text-muted4 uppercase; font-size: 0.6rem; margin-top: 0.35rem; }
+        .windows-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 0.75rem;
+          margin-top: 0.5rem;
+        }
+        .windows-col { @apply flex flex-col; gap: 0.1rem; }
+        .windows-day { @apply text-muted4 uppercase; font-size: 0.6rem; margin-bottom: 0.2rem; }
         .windows-item { @apply flex gap-2 text-muted1; font-size: 0.72rem; }
         .windows-item-sleep { @apply text-muted4; }
-        .windows-num { @apply tabular-nums text-right; min-width: 1.2rem; }
-        .windows-range { @apply flex-1 text-body-text font-medium; }
+        .windows-num { @apply tabular-nums text-right; min-width: 1.2rem; flex-shrink: 0; }
+        .windows-range { @apply text-body-text font-medium; }
         .windows-range .windows-duration { @apply text-muted2; margin-left: 0.3em; }
 
         /* Suggestion section */
@@ -331,6 +348,8 @@
         /* Notes */
         .reference-note,
         .pricing-note { font-size: 0.85rem; color: #666; margin-top: 1rem; }
+        .reference-link { color: #818cf8; text-decoration: none; }
+        .reference-link:hover { text-decoration: underline; }
 
         /* Range input sliders */
         input[type=range] {
@@ -370,81 +389,92 @@
 
     <div class="flex flex-col gap-4 w-full max-w-[960px]" id="results"></div>
 
-    <div id="suggestion"></div>
+    <div id="suggestion" class="w-full max-w-[960px]"></div>
 
-    <div class="flex flex-col gap-3 w-full max-w-[960px]">
-      <div class="flex items-center gap-3 text-muted3" data-type="session" style="font-size: 0.75rem;">
-        <label for="session-exponent" style="min-width: 9rem;">Session pacing:</label>
-        <input
-          type="range"
-          id="session-exponent"
-          min="0"
-          max="1"
-          step="0.01"
-          value="0.55"
-        />
-        <span id="session-exponent-label" style="min-width: 8rem; color: #a5b4fc;">Front-loaded</span>
-      </div>
-      <div class="flex items-center gap-3 text-muted3" style="font-size: 0.75rem;">
-        <label for="weekly-exponent" style="min-width: 9rem;">Weekly pacing:</label>
-        <input
-          type="range"
-          id="weekly-exponent"
-          min="0"
-          max="1"
-          step="0.01"
-          value="0.65"
-        />
-        <span id="weekly-exponent-label" style="min-width: 8rem; color: #a5b4fc;">Front-loaded</span>
+    <div class="w-full max-w-[960px] mt-4">
+      <button id="btn-pacing-toggle" class="w-full py-3 bg-surface border border-muted5 rounded text-muted2 text-left cursor-pointer hover:bg-surface2 flex justify-between items-center px-4">
+        <span>Pacing</span><span id="pacing-chevron">▶</span>
+      </button>
+      <div id="pacing-content" style="display: none;">
+        <div class="flex flex-col gap-3 w-full pt-3">
+          <div class="flex items-center gap-3 text-muted3" data-type="session" style="font-size: 0.75rem;">
+            <label for="session-exponent" style="min-width: 9rem;">Session pacing:</label>
+            <input
+              type="range"
+              id="session-exponent"
+              min="0"
+              max="1"
+              step="0.01"
+              value="0.55"
+            />
+            <span id="session-exponent-label" style="min-width: 8rem; color: #a5b4fc;">Front-loaded</span>
+          </div>
+          <div class="flex items-center gap-3 text-muted3" style="font-size: 0.75rem;">
+            <label for="weekly-exponent" style="min-width: 9rem;">Weekly pacing:</label>
+            <input
+              type="range"
+              id="weekly-exponent"
+              min="0"
+              max="1"
+              step="0.01"
+              value="0.65"
+            />
+            <span id="weekly-exponent-label" style="min-width: 8rem; color: #a5b4fc;">Front-loaded</span>
+          </div>
+        </div>
+        <div class="w-full mt-4">
+          <div class="grid grid-cols-4 gap-4">
+            <div class="flex flex-col gap-2 p-4 rounded-xl border border-border bg-gradient-to-br from-surface to-base">
+              <div class="text-indigo-light uppercase tracking-wide" style="font-size: 0.85rem;">Aggressive</div>
+              <div class="text-muted3 italic" style="font-size: 0.75rem;">Use most of your quota early</div>
+              <ul class="flex flex-col gap-1 text-muted2" style="font-size: 0.75rem; list-style: none; padding: 0; margin: 0;">
+                <li>Heavy usage planned for today/early in the week</li>
+                <li>Need fast iteration on urgent work</li>
+                <li>Know you'll have lighter usage later</li>
+              </ul>
+            </div>
+            <div class="flex flex-col gap-2 p-4 rounded-xl border border-border bg-gradient-to-br from-surface to-base">
+              <div class="text-indigo-light uppercase tracking-wide" style="font-size: 0.85rem;">Front-loaded</div>
+              <div class="text-muted3 italic" style="font-size: 0.75rem;">Slightly skew toward early usage</div>
+              <ul class="flex flex-col gap-1 text-muted2" style="font-size: 0.75rem; list-style: none; padding: 0; margin: 0;">
+                <li>Plan to work more early, taper off later</li>
+                <li>Natural daily/weekly rhythm with productivity peaks</li>
+                <li>Most common for balanced workflows (default)</li>
+              </ul>
+            </div>
+            <div class="flex flex-col gap-2 p-4 rounded-xl border border-border bg-gradient-to-br from-surface to-base">
+              <div class="text-indigo-light uppercase tracking-wide" style="font-size: 0.85rem;">Slight Push</div>
+              <div class="text-muted3 italic" style="font-size: 0.75rem;">
+                Nearly even, slight preference for later
+              </div>
+              <ul class="flex flex-col gap-1 text-muted2" style="font-size: 0.75rem; list-style: none; padding: 0; margin: 0;">
+                <li>Want flexibility and steady usage throughout</li>
+                <li>No strong pattern of high or low periods</li>
+                <li>Prefer not to rush early on</li>
+              </ul>
+            </div>
+            <div class="flex flex-col gap-2 p-4 rounded-xl border border-border bg-gradient-to-br from-surface to-base">
+              <div class="text-indigo-light uppercase tracking-wide" style="font-size: 0.85rem;">Conservative</div>
+              <div class="text-muted3 italic" style="font-size: 0.75rem;">
+                Spread usage evenly across the period
+              </div>
+              <ul class="flex flex-col gap-1 text-muted2" style="font-size: 0.75rem; list-style: none; padding: 0; margin: 0;">
+                <li>Uncertain about upcoming workload</li>
+                <li>Want maximum flexibility in usage timing</li>
+                <li>Prefer to save quota for later just in case</li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
     <div class="w-full max-w-[960px] mt-4">
-      <div class="grid grid-cols-4 gap-4">
-        <div class="flex flex-col gap-2 p-4 rounded-xl border border-border bg-gradient-to-br from-surface to-base">
-          <div class="text-indigo-light uppercase tracking-wide" style="font-size: 0.85rem;">Aggressive</div>
-          <div class="text-muted3 italic" style="font-size: 0.75rem;">Use most of your quota early</div>
-          <ul class="flex flex-col gap-1 text-muted2" style="font-size: 0.75rem; list-style: none; padding: 0; margin: 0;">
-            <li>Heavy usage planned for today/early in the week</li>
-            <li>Need fast iteration on urgent work</li>
-            <li>Know you'll have lighter usage later</li>
-          </ul>
-        </div>
-        <div class="flex flex-col gap-2 p-4 rounded-xl border border-border bg-gradient-to-br from-surface to-base">
-          <div class="text-indigo-light uppercase tracking-wide" style="font-size: 0.85rem;">Front-loaded</div>
-          <div class="text-muted3 italic" style="font-size: 0.75rem;">Slightly skew toward early usage</div>
-          <ul class="flex flex-col gap-1 text-muted2" style="font-size: 0.75rem; list-style: none; padding: 0; margin: 0;">
-            <li>Plan to work more early, taper off later</li>
-            <li>Natural daily/weekly rhythm with productivity peaks</li>
-            <li>Most common for balanced workflows (default)</li>
-          </ul>
-        </div>
-        <div class="flex flex-col gap-2 p-4 rounded-xl border border-border bg-gradient-to-br from-surface to-base">
-          <div class="text-indigo-light uppercase tracking-wide" style="font-size: 0.85rem;">Slight Push</div>
-          <div class="text-muted3 italic" style="font-size: 0.75rem;">
-            Nearly even, slight preference for later
-          </div>
-          <ul class="flex flex-col gap-1 text-muted2" style="font-size: 0.75rem; list-style: none; padding: 0; margin: 0;">
-            <li>Want flexibility and steady usage throughout</li>
-            <li>No strong pattern of high or low periods</li>
-            <li>Prefer not to rush early on</li>
-          </ul>
-        </div>
-        <div class="flex flex-col gap-2 p-4 rounded-xl border border-border bg-gradient-to-br from-surface to-base">
-          <div class="text-indigo-light uppercase tracking-wide" style="font-size: 0.85rem;">Conservative</div>
-          <div class="text-muted3 italic" style="font-size: 0.75rem;">
-            Spread usage evenly across the period
-          </div>
-          <ul class="flex flex-col gap-1 text-muted2" style="font-size: 0.75rem; list-style: none; padding: 0; margin: 0;">
-            <li>Uncertain about upcoming workload</li>
-            <li>Want maximum flexibility in usage timing</li>
-            <li>Prefer to save quota for later just in case</li>
-          </ul>
-        </div>
-      </div>
+      <button id="btn-history-toggle" class="w-full py-3 bg-surface border border-muted5 rounded text-muted2 text-left cursor-pointer hover:bg-surface2 flex justify-between items-center px-4">
+        <span>Usage History</span><span id="history-chevron">▶</span>
+      </button>
+      <div id="history-panel" style="display: none;"></div>
     </div>
-
-    <div id="history-panel"></div>
 
     <div class="w-full max-w-[960px] mt-4">
       <button id="btn-practices-toggle" class="w-full py-3 bg-surface border border-muted5 rounded text-muted2 text-left cursor-pointer hover:bg-surface2">💡 Quota Best Practices</button>
@@ -492,7 +522,7 @@
           <li>Don't run Claude Code in loops without rate-limit handling.</li>
         </ul>
 
-        <p class="reference-note">Full guide available in docs/quota-best-practices.md</p>
+        <p class="reference-note"><a href="docs/quota-best-practices.md" target="_blank" rel="noopener" class="reference-link">Full guide: docs/quota-best-practices.md</a></p>
       </div>
     </div>
 

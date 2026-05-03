@@ -3,6 +3,8 @@ const CONFIG = {
 };
 
 const SHOW_SESSION_KEY = 'claude-usage-show-session';
+const SHOW_PACING_KEY = 'claude-usage-show-pacing';
+const SHOW_HISTORY_KEY = 'claude-usage-show-history';
 
 let textarea;
 let errorEl;
@@ -186,6 +188,24 @@ document.addEventListener('DOMContentLoaded', function() {
     localStorage.setItem(SHOW_PRICING_KEY, isVisible ? '0' : '1');
   });
 
+  document.getElementById('btn-pacing-toggle').addEventListener('click', function() {
+    const content = document.getElementById('pacing-content');
+    const chevron = document.getElementById('pacing-chevron');
+    const isVisible = content.style.display !== 'none';
+    content.style.display = isVisible ? 'none' : 'block';
+    chevron.textContent = isVisible ? '▶' : '▼';
+    localStorage.setItem(SHOW_PACING_KEY, isVisible ? '0' : '1');
+  });
+
+  document.getElementById('btn-history-toggle').addEventListener('click', function() {
+    const panel = document.getElementById('history-panel');
+    const chevron = document.getElementById('history-chevron');
+    const isVisible = panel.style.display !== 'none';
+    panel.style.display = isVisible ? 'none' : 'block';
+    chevron.textContent = isVisible ? '▶' : '▼';
+    localStorage.setItem(SHOW_HISTORY_KEY, isVisible ? '0' : '1');
+  });
+
   const stored = localStorage.getItem(SHOW_SESSION_KEY);
   setSessionVisible(stored === '1');
   updateAlarmButtonLabel();
@@ -198,6 +218,18 @@ document.addEventListener('DOMContentLoaded', function() {
   const practicesStored = localStorage.getItem(SHOW_PRACTICES_KEY);
   if (practicesStored === '1') {
     document.getElementById('practices-content').style.display = 'block';
+  }
+
+  const pacingStored = localStorage.getItem(SHOW_PACING_KEY);
+  if (pacingStored === '1') {
+    document.getElementById('pacing-content').style.display = 'block';
+    document.getElementById('pacing-chevron').textContent = '▼';
+  }
+
+  const historyStored = localStorage.getItem(SHOW_HISTORY_KEY);
+  if (historyStored === '1') {
+    document.getElementById('history-panel').style.display = 'block';
+    document.getElementById('history-chevron').textContent = '▼';
   }
 
   const last = loadLastInput();
