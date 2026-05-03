@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+yarn.lock
+package-lock.json
+pnpm-lock.yaml
+
+# Build & Distribution
+dist/
+build/
+*.min.js
+*.min.css
+.cache/
+
+# IDE & Editor
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+*~
+.vim/
+
+# Logs & Temp
+*.log
+logs/
+tmp/
+temp/
+.temp/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Git
+.git/
+.gitignore
+
+# OS
+Thumbs.db
+
+# Tests (if large)
+coverage/
+.nyc_output/
+
+# Project-specific
+.planning/

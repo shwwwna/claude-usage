@@ -10,15 +10,45 @@ function dedupKey(e) {
   return e.sessionPct + '|' + e.weeklyPct;
 }
 
+function getResetTime(e) {
+  if (e.sessionHoursLeft !== null) {
+    return e.ts + (e.sessionHoursLeft * 3600 * 1000);
+  }
+  return null;
+}
+
 function dedupEntries(entries) {
   const seen = new Map();
+  const resetTimeSeen = new Map();
+
   for (const e of entries) {
+    const resetTime = getResetTime(e);
+
+    if (resetTime !== null) {
+      const resetKey = Math.round(resetTime / 1000);
+      if (resetTimeSeen.has(resetKey)) {
+        const existing = resetTimeSeen.get(resetKey);
+        if (e.ts > existing.ts) {
+          resetTimeSeen.set(resetKey, e);
+        }
+        continue;
+      }
+      resetTimeSeen.set(resetKey, e);
+    }
+
     const k = dedupKey(e);
     if (!seen.has(k) || e.ts > seen.get(k).ts) {
       seen.set(k, e);
     }
   }
-  return Array.from(seen.values()).sort(function(a, b) { return a.ts - b.ts; });
+
+  const combined = Array.from(resetTimeSeen.values()).concat(
+    Array.from(seen.values()).filter(function(e) {
+      return !resetTimeSeen.has(Math.round(getResetTime(e) / 1000));
+    })
+  );
+
+  return combined.sort(function(a, b) { return a.ts - b.ts; });
 }
 
 function loadHistory() {
@@ -138,20 +168,38 @@ function importJSON(file) {
 }
 
 function groupBySession(entries) {
-  const TOLERANCE_MS = 5 * 60 * 1000;
+  const RESET_TOLERANCE_MS = 10 * 60 * 1000;
+  const TIME_TOLERANCE_MS = 5 * 60 * 1000;
   const grouped = [];
 
   entries.forEach(function(e) {
+    const eReset = getResetTime(e);
     let placed = false;
+
     for (let i = 0; i < grouped.length; i++) {
       const g = grouped[i];
+
+      if (eReset !== null) {
+        const gResets = g.map(getResetTime).filter(function(r) { return r !== null; });
+        if (gResets.length > 0) {
+          const avgReset = gResets.reduce(function(a, b) { return a + b; }, 0) / gResets.length;
+          if (Math.abs(eReset - avgReset) <= RESET_TOLERANCE_MS) {
+            g.push(e);
+            placed = true;
+            break;
+          }
+          continue;
+        }
+      }
+
       const maxTs = Math.max.apply(null, g.map(function(x) { return x.ts; }));
-      if (Math.abs(e.ts - maxTs) <= TOLERANCE_MS) {
+      if (Math.abs(e.ts - maxTs) <= TIME_TOLERANCE_MS) {
         g.push(e);
         placed = true;
         break;
       }
     }
+
     if (!placed) {
       grouped.push([e]);
     }

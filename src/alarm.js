@@ -66,7 +66,7 @@ function fireAlarm() {
 
 function startSound() {
   try {
-    alarmAudio = new Audio('Recover.mp3');
+    alarmAudio = new Audio('../assets/Recover.mp3');
     alarmAudio.loop = true;
     alarmAudio.volume = 0.5;
     alarmAudio.play();
