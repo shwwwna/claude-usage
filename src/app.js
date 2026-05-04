@@ -106,7 +106,7 @@ const SHOW_PRICING_KEY = 'claude-usage-show-pricing';
 const SHOW_PRACTICES_KEY = 'claude-usage-show-practices';
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js');
+  navigator.serviceWorker.register('/claude-usage/src/sw.js', { scope: '/claude-usage/' });
 }
 
 document.addEventListener('DOMContentLoaded', function() {

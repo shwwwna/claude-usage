@@ -1,20 +1,16 @@
-const CACHE = 'claude-usage-v5';
+const CACHE = 'claude-usage-v6';
 const ASSETS = [
   '/claude-usage/',
   '/claude-usage/index.html',
   '/claude-usage/manifest.json',
   '/claude-usage/icon.svg',
+  '/claude-usage/tailwindcss.min.js',
   '/claude-usage/src/parser.js',
   '/claude-usage/src/stats.js',
   '/claude-usage/src/history.js',
   '/claude-usage/src/alarm.js',
-  '/claude-usage/src/styles.css',
-  '/claude-usage/src/tailwindcss.min.js',
-  '/claude-usage/src/alpine.min.js',
   '/claude-usage/src/app.js',
   '/claude-usage/src/renderer.js',
-  '/claude-usage/src/sw.js',
-  '/claude-usage/assets/Recover.mp3'
 ];
 
 self.addEventListener('install', e => {
