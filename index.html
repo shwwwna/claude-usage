@@ -114,6 +114,7 @@
         .compact-meta-cell { @apply flex items-baseline gap-1; }
         .stat-label { @apply text-muted2; font-size: 0.8rem; }
         .stat-value { @apply font-semibold tabular-nums; font-size: 1rem; }
+        .bar-legend-left { @apply tabular-nums text-legend-dim text-center; font-size: 0.5rem; }
         .stat-explainer { @apply text-muted4; font-size: 0.65rem; margin-top: -0.2rem; }
 
         /* Fraction values */
@@ -190,7 +191,7 @@
         }
         .bar-legend-pct { @apply tabular-nums text-legend-bright; font-size: 0.6rem; }
         .bar-legend-date { @apply tabular-nums text-legend-mid; font-size: 0.55rem; }
-        .bar-legend-left { @apply tabular-nums text-legend-dim; font-size: 0.5rem; }
+        .bar-legend-left { @apply tabular-nums text-legend-dim text-center; font-size: 0.5rem; }
         .bar-legend-reset .bar-legend-pct { @apply text-muted3; }
 
         /* Sleep controls */
@@ -393,35 +394,10 @@
 
     <div class="w-full max-w-[960px] mt-4">
       <button id="btn-pacing-toggle" class="w-full py-3 bg-surface border border-muted5 rounded text-muted2 text-left cursor-pointer hover:bg-surface2 flex justify-between items-center px-4">
-        <span>Pacing</span><span id="pacing-chevron">▶</span>
+        <span>Pacing Legend</span><span id="pacing-chevron">▶</span>
       </button>
       <div id="pacing-content" style="display: none;">
-        <div class="flex flex-col gap-3 w-full pt-3">
-          <div class="flex items-center gap-3 text-muted3" data-type="session" style="font-size: 0.75rem;">
-            <label for="session-exponent" style="min-width: 9rem;">Session pacing:</label>
-            <input
-              type="range"
-              id="session-exponent"
-              min="0"
-              max="1"
-              step="0.01"
-              value="0.55"
-            />
-            <span id="session-exponent-label" style="min-width: 8rem; color: #a5b4fc;">Front-loaded</span>
-          </div>
-          <div class="flex items-center gap-3 text-muted3" style="font-size: 0.75rem;">
-            <label for="weekly-exponent" style="min-width: 9rem;">Weekly pacing:</label>
-            <input
-              type="range"
-              id="weekly-exponent"
-              min="0"
-              max="1"
-              step="0.01"
-              value="0.65"
-            />
-            <span id="weekly-exponent-label" style="min-width: 8rem; color: #a5b4fc;">Front-loaded</span>
-          </div>
-        </div>
+        <div class="flex flex-col gap-3 w-full pt-3"></div>
         <div class="w-full mt-4">
           <div class="grid grid-cols-4 gap-4">
             <div class="flex flex-col gap-2 p-4 rounded-xl border border-border bg-gradient-to-br from-surface to-base">

@@ -213,6 +213,45 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent, ses
 
   card.appendChild(buildUnifiedBar(actualPct, targetPct, status));
 
+  const pacingControl = document.createElement('div');
+  pacingControl.className = 'flex items-center gap-3 text-muted3 mt-2';
+  pacingControl.style.fontSize = '0.75rem';
+
+  const pacingLabel = document.createElement('label');
+  pacingLabel.style.minWidth = label === 'Session' ? '9rem' : '9rem';
+  pacingLabel.textContent = label.toLowerCase() + ' pacing:';
+  pacingControl.appendChild(pacingLabel);
+
+  const pacingSlider = document.createElement('input');
+  pacingSlider.type = 'range';
+  pacingSlider.id = label === 'Session' ? 'session-exponent' : 'weekly-exponent';
+  pacingSlider.min = '0';
+  pacingSlider.max = '1';
+  pacingSlider.step = '0.01';
+  pacingSlider.value = exponent;
+  pacingSlider.className = 'flex-1';
+  pacingSlider.addEventListener('input', function() {
+    const v = parseFloat(this.value);
+    if (label === 'Session') {
+      sessionExponent = v;
+    } else {
+      weeklyExponent = v;
+    }
+    const labelEl = document.getElementById(label === 'Session' ? 'session-exponent-label' : 'weekly-exponent-label');
+    if (labelEl) labelEl.textContent = exponentToLabel(v);
+    run({ skipAutoPace: true });
+  });
+  pacingControl.appendChild(pacingSlider);
+
+  const pacingValueLabel = document.createElement('span');
+  pacingValueLabel.id = label === 'Session' ? 'session-exponent-label' : 'weekly-exponent-label';
+  pacingValueLabel.style.minWidth = '8rem';
+  pacingValueLabel.style.color = '#a5b4fc';
+  pacingValueLabel.textContent = exponentToLabel(exponent);
+  pacingControl.appendChild(pacingValueLabel);
+
+  card.appendChild(pacingControl);
+
   card.appendChild(buildLegend(totalHours, hoursLeft, exponent, actualPct));
 
   return card;
@@ -295,6 +334,7 @@ function buildLegend(totalHours, hoursLeft, exponent, actualPct) {
   const e = exponent > 0 ? exponent : 1;
 
   const remainingMs = hoursLeft * 3600 * 1000;
+  const resetMs = now + remainingMs;
   const curveNow = Math.pow(actualPct / 100, 1 / e);
   const curveEnd = 1;
 
@@ -348,35 +388,23 @@ function buildLegend(totalHours, hoursLeft, exponent, actualPct) {
 
       const leftEl = document.createElement('div');
       leftEl.className = 'bar-legend-left';
-      leftEl.textContent = fmtLeft(hitMs - now);
+      if (m === 100) {
+        const diffMs = resetMs - hitMs;
+        const totalMin = Math.max(0, Math.round(diffMs / 60000));
+        const d = Math.floor(totalMin / 1440);
+        const h = Math.floor((totalMin % 1440) / 60);
+        const min = totalMin % 60;
+        if (d > 0) leftEl.textContent = d + 'd ' + h + 'h earlier than reset';
+        else if (h > 0) leftEl.textContent = h + 'h ' + min + 'm earlier than reset';
+        else leftEl.textContent = min + 'm earlier than reset';
+      } else {
+        leftEl.textContent = fmtLeft(hitMs - now);
+      }
       item.appendChild(leftEl);
     }
 
     legend.appendChild(item);
   });
-
-  // Add actual reset deadline as a separate row
-  const resetMs = now + hoursLeft * 3600 * 1000;
-  const resetDate = new Date(resetMs);
-  const resetItem = document.createElement('div');
-  resetItem.className = 'bar-legend-item bar-legend-reset';
-
-  const resetPctEl = document.createElement('div');
-  resetPctEl.className = 'bar-legend-pct';
-  resetPctEl.textContent = 'Reset';
-  resetItem.appendChild(resetPctEl);
-
-  const resetDateEl = document.createElement('div');
-  resetDateEl.className = 'bar-legend-date';
-  resetDateEl.textContent = fmtDateStr(resetDate);
-  resetItem.appendChild(resetDateEl);
-
-  const resetLeftEl = document.createElement('div');
-  resetLeftEl.className = 'bar-legend-left';
-  resetLeftEl.textContent = fmtLeft(resetMs - now);
-  resetItem.appendChild(resetLeftEl);
-
-  legend.appendChild(resetItem);
 
   return legend;
 }

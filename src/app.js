@@ -162,17 +162,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  ['session', 'weekly'].forEach(function(key) {
-    const slider = document.getElementById(key + '-exponent');
-    const label = document.getElementById(key + '-exponent-label');
-    slider.addEventListener('input', function() {
-      const v = parseFloat(slider.value);
-      if (key === 'session') sessionExponent = v;
-      else weeklyExponent = v;
-      label.textContent = exponentToLabel(v);
-      run({ skipAutoPace: true });
-    });
-  });
 
   document.getElementById('btn-practices-toggle').addEventListener('click', function() {
     const content = document.getElementById('practices-content');
