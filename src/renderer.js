@@ -331,7 +331,7 @@ function buildLegend(totalHours, hoursLeft, exponent, actualPct) {
   const legend = document.createElement('div');
   legend.className = 'bar-legend';
 
-  const e = exponent > 0 ? exponent : 1;
+  const e = Math.max(exponent, 0.05);
 
   const remainingMs = hoursLeft * 3600 * 1000;
   const resetMs = now + remainingMs;
@@ -457,6 +457,7 @@ function buildSleepAndWindowsCard(hoursLeft, resetMs, sessionStartMs) {
 
   const chevron = document.createElement('span');
   chevron.className = 'card-chevron';
+  chevron.textContent = '›';
   titleRow.appendChild(chevron);
 
   card.appendChild(titleRow);
@@ -522,17 +523,17 @@ function buildSleepAndWindowsCard(hoursLeft, resetMs, sessionStartMs) {
   cardBody.appendChild(windowsContainer);
   card.appendChild(cardBody);
 
-  const SHOW_SLEEP_WINDOWS_KEY = 'claude-usage-show-sleep-windows';
+  const SHOW_SLEEP_WINDOWS_KEY = 'claude-usage-show-sleep-windows-v2';
   const savedState = localStorage.getItem(SHOW_SLEEP_WINDOWS_KEY);
   const isExpanded = savedState !== '0';
   cardBody.style.display = isExpanded ? '' : 'none';
-  chevron.textContent = isExpanded ? ' ▼' : ' ▶';
+  if (isExpanded) chevron.classList.add('open');
 
   titleRow.style.cursor = 'pointer';
   titleRow.addEventListener('click', function() {
     const nowExpanded = cardBody.style.display !== 'none';
     cardBody.style.display = nowExpanded ? 'none' : '';
-    chevron.textContent = nowExpanded ? ' ▶' : ' ▼';
+    chevron.classList.toggle('open');
     localStorage.setItem(SHOW_SLEEP_WINDOWS_KEY, nowExpanded ? '0' : '1');
   });
 
@@ -724,16 +725,35 @@ function renderSuggestion(parsed) {
 
   if (!suggestions.length) return;
 
-  const section = document.createElement('div');
-  section.className = 'suggestion-section';
+  const SHOW_SUGGESTION_KEY = 'claude-usage-show-suggestion';
 
-  const heading = document.createElement('div');
-  heading.className = 'suggestion-heading';
-  heading.innerHTML = '💡 Suggested Pacing';
-  section.appendChild(heading);
+  const toggle = document.createElement('button');
+  toggle.className = 'card-toggle';
+
+  const titleSpan = document.createElement('span');
+  titleSpan.className = 'card-title';
+  titleSpan.textContent = 'Suggested Pacing';
+
+  const chevron = document.createElement('span');
+  chevron.className = 'card-chevron';
+  chevron.textContent = '›';
+
+  toggle.appendChild(titleSpan);
+  toggle.appendChild(chevron);
 
   const items = document.createElement('div');
   items.className = 'suggestion-items';
+
+  const isOpen = localStorage.getItem(SHOW_SUGGESTION_KEY) === '1';
+  items.style.display = isOpen ? 'block' : 'none';
+  if (isOpen) chevron.classList.add('open');
+
+  toggle.addEventListener('click', function() {
+    const visible = items.style.display !== 'none';
+    items.style.display = visible ? 'none' : 'block';
+    chevron.classList.toggle('open', !visible);
+    localStorage.setItem(SHOW_SUGGESTION_KEY, visible ? '0' : '1');
+  });
 
   suggestions.forEach(function(s) {
     const suggested = suggestPacing(s.actualPct);
@@ -777,8 +797,47 @@ function renderSuggestion(parsed) {
     items.appendChild(item);
   });
 
-  section.appendChild(items);
-  container.appendChild(section);
+  const legendGrid = document.createElement('div');
+  legendGrid.className = 'grid grid-cols-4 gap-4';
+  legendGrid.style.marginTop = '0.5rem';
+
+  [
+    { name: 'Aggressive', sub: 'Use most of your quota early', bullets: ['Heavy usage planned for today/early in the week', 'Need fast iteration on urgent work', "Know you'll have lighter usage later"] },
+    { name: 'Front-loaded', sub: 'Slightly skew toward early usage', bullets: ['Plan to work more early, taper off later', 'Natural daily/weekly rhythm with productivity peaks', 'Most common for balanced workflows (default)'] },
+    { name: 'Slight Push', sub: 'Nearly even, slight preference for later', bullets: ['Want flexibility and steady usage throughout', 'No strong pattern of high or low periods', 'Prefer not to rush early on'] },
+    { name: 'Conservative', sub: 'Spread usage evenly across the period', bullets: ['Uncertain about upcoming workload', 'Want maximum flexibility in usage timing', 'Prefer to save quota for later just in case'] },
+  ].forEach(function(p) {
+    const col = document.createElement('div');
+    col.className = 'pacing-card';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'text-indigo-light uppercase tracking-wide';
+    nameEl.style.fontSize = '0.85rem';
+    nameEl.textContent = p.name;
+    col.appendChild(nameEl);
+
+    const subEl = document.createElement('div');
+    subEl.className = 'text-muted3 italic';
+    subEl.style.fontSize = '0.75rem';
+    subEl.textContent = p.sub;
+    col.appendChild(subEl);
+
+    const ul = document.createElement('ul');
+    ul.style.cssText = 'font-size: 0.75rem; list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.25rem; color: #aaa;';
+    p.bullets.forEach(function(b) {
+      const li = document.createElement('li');
+      li.textContent = b;
+      ul.appendChild(li);
+    });
+    col.appendChild(ul);
+
+    legendGrid.appendChild(col);
+  });
+
+  items.appendChild(legendGrid);
+
+  container.appendChild(toggle);
+  container.appendChild(items);
 }
 
 function renderHistory(entries) {

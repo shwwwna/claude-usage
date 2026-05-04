@@ -3,7 +3,7 @@ const WEEKLY_WINDOW_HOURS  = 168;
 
 function computeStats(totalHours, hoursLeft, actualPct, exponent) {
   const elapsed = totalHours - hoursLeft;
-  const e = (exponent !== undefined) ? exponent : 1.0;
+  const e = Math.max((exponent !== undefined) ? exponent : 1.0, 0.05);
   let targetPct = Math.pow(elapsed / totalHours, e) * 100;
   targetPct = Math.min(100, Math.max(0, targetPct));
 

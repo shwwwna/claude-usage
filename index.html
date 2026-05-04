@@ -87,9 +87,7 @@
           @apply px-3 py-1 bg-surface2 text-muted1 rounded cursor-pointer;
           font-size: 0.75rem;
           border: 1px solid #3a3a3f;
-          transition: background 0.15s, color 0.15s;
         }
-        button:hover { @apply bg-border text-text; }
 
         /* data-attribute selectors — cannot be expressed as Tailwind utilities */
         body.session-hidden .card[data-type="session"] { display: none; }
@@ -106,6 +104,12 @@
         .card-title {
           @apply text-muted3 uppercase tracking-widest;
           font-size: 0.7rem;
+        }
+        .pacing-card {
+          @apply bg-surface border border-border rounded-xl flex flex-col gap-2 p-4;
+        }
+        .content-card {
+          @apply bg-surface2 border border-border2 rounded-lg p-4;
         }
 
         /* Stat rows */
@@ -177,7 +181,14 @@
 
         /* Cards - accordion support */
         .card-title-row { @apply flex justify-between items-center; }
-        .card-chevron { @apply text-muted4; font-size: 0.65rem; }
+        .card-toggle {
+          @apply w-full py-0 bg-transparent border-0 text-left cursor-pointer flex justify-between items-center px-0;
+        }
+        .card-chevron {
+          @apply text-muted3 transition-transform;
+          font-size: 1rem;
+        }
+        .card-chevron.open { transform: rotate(90deg); }
 
         /* Bar legend */
         .bar-legend { @apply grid w-full; grid-template-columns: repeat(10, 1fr); }
@@ -217,18 +228,12 @@
         .windows-col { @apply flex flex-col; gap: 0.1rem; }
         .windows-day { @apply text-muted4 uppercase; font-size: 0.6rem; margin-bottom: 0.2rem; }
         .windows-item { @apply flex gap-2 text-muted1; font-size: 0.72rem; }
-        .windows-item-sleep { @apply text-muted4; }
+        .windows-item-sleep { @apply text-muted3; opacity: 0.55; }
         .windows-num { @apply tabular-nums text-right; min-width: 1.2rem; flex-shrink: 0; }
         .windows-range { @apply text-body-text font-medium; }
         .windows-range .windows-duration { @apply text-muted2; margin-left: 0.3em; }
 
-        /* Suggestion section */
-        .suggestion-section {
-          @apply flex flex-col gap-3 p-4 rounded-xl border w-full;
-          background: linear-gradient(135deg, #1e3a1f, #1c2a1f);
-          border-color: #2d5a2d;
-        }
-        .suggestion-heading { @apply text-green-light uppercase tracking-widest; font-size: 0.75rem; }
+        /* Suggestion items */
         .suggestion-items { @apply flex flex-col gap-2; }
         .suggestion-item {
           @apply flex justify-between items-center p-2 rounded;
@@ -248,7 +253,6 @@
           border: 1px solid #3a6a3a;
           font-size: 0.75rem;
         }
-        .suggestion-btn:hover { background: #3a6a3a; }
 
         /* History */
         .history-empty { @apply text-muted3 text-center; font-size: 0.85rem; }
@@ -267,12 +271,13 @@
         .btn-history:hover { @apply bg-border; }
         .btn-history-clear { @apply text-red-light; border-color: #450a0a; }
         .btn-history-delete {
-          @apply hidden text-red-light cursor-pointer;
+          @apply text-red-light cursor-pointer;
           border-color: #3a1f1f;
           font-size: 0.75rem;
+          visibility: hidden;
         }
         /* reveal delete button on row hover — parent hover, can't be Tailwind utility */
-        .history-table tbody tr:hover .btn-history-delete { display: inline-block; }
+        .history-table tbody tr:hover .btn-history-delete { visibility: visible; }
 
         /* Session grouping */
         .history-sessions-container { @apply flex flex-col gap-6; }
@@ -329,9 +334,11 @@
           color: #fff;
           margin-bottom: 1rem;
           margin-top: 1.5rem;
+          padding: 0;
         }
         #practices-content h3:first-child,
         #pricing-content h3:first-child { margin-top: 0; }
+
 
         /* Practices list */
         .practices-list { list-style: none; padding: 0; margin: 0 0 1.5rem 0; }
@@ -382,7 +389,7 @@
         <button id="btn-paste">Paste</button>
         <button id="btn-clear">Clear</button>
         <button id="btn-toggle-session">Show session calculation</button>
-        <button id="btn-alarm-toggle">🔔 Alarm: off</button>
+        <button id="btn-alarm-toggle">Alarm: off</button>
       </div>
     </div>
 
@@ -390,82 +397,31 @@
 
     <div class="flex flex-col gap-4 w-full max-w-[960px]" id="results"></div>
 
-    <div id="suggestion" class="w-full max-w-[960px]"></div>
+    <div id="suggestion" class="w-full max-w-[960px] card"></div>
 
-    <div class="w-full max-w-[960px] mt-4">
-      <button id="btn-pacing-toggle" class="w-full py-3 bg-surface border border-muted5 rounded text-muted2 text-left cursor-pointer hover:bg-surface2 flex justify-between items-center px-4">
-        <span>Pacing Legend</span><span id="pacing-chevron">▶</span>
-      </button>
-      <div id="pacing-content" style="display: none;">
-        <div class="flex flex-col gap-3 w-full pt-3"></div>
-        <div class="w-full mt-4">
-          <div class="grid grid-cols-4 gap-4">
-            <div class="flex flex-col gap-2 p-4 rounded-xl border border-border bg-gradient-to-br from-surface to-base">
-              <div class="text-indigo-light uppercase tracking-wide" style="font-size: 0.85rem;">Aggressive</div>
-              <div class="text-muted3 italic" style="font-size: 0.75rem;">Use most of your quota early</div>
-              <ul class="flex flex-col gap-1 text-muted2" style="font-size: 0.75rem; list-style: none; padding: 0; margin: 0;">
-                <li>Heavy usage planned for today/early in the week</li>
-                <li>Need fast iteration on urgent work</li>
-                <li>Know you'll have lighter usage later</li>
-              </ul>
-            </div>
-            <div class="flex flex-col gap-2 p-4 rounded-xl border border-border bg-gradient-to-br from-surface to-base">
-              <div class="text-indigo-light uppercase tracking-wide" style="font-size: 0.85rem;">Front-loaded</div>
-              <div class="text-muted3 italic" style="font-size: 0.75rem;">Slightly skew toward early usage</div>
-              <ul class="flex flex-col gap-1 text-muted2" style="font-size: 0.75rem; list-style: none; padding: 0; margin: 0;">
-                <li>Plan to work more early, taper off later</li>
-                <li>Natural daily/weekly rhythm with productivity peaks</li>
-                <li>Most common for balanced workflows (default)</li>
-              </ul>
-            </div>
-            <div class="flex flex-col gap-2 p-4 rounded-xl border border-border bg-gradient-to-br from-surface to-base">
-              <div class="text-indigo-light uppercase tracking-wide" style="font-size: 0.85rem;">Slight Push</div>
-              <div class="text-muted3 italic" style="font-size: 0.75rem;">
-                Nearly even, slight preference for later
-              </div>
-              <ul class="flex flex-col gap-1 text-muted2" style="font-size: 0.75rem; list-style: none; padding: 0; margin: 0;">
-                <li>Want flexibility and steady usage throughout</li>
-                <li>No strong pattern of high or low periods</li>
-                <li>Prefer not to rush early on</li>
-              </ul>
-            </div>
-            <div class="flex flex-col gap-2 p-4 rounded-xl border border-border bg-gradient-to-br from-surface to-base">
-              <div class="text-indigo-light uppercase tracking-wide" style="font-size: 0.85rem;">Conservative</div>
-              <div class="text-muted3 italic" style="font-size: 0.75rem;">
-                Spread usage evenly across the period
-              </div>
-              <ul class="flex flex-col gap-1 text-muted2" style="font-size: 0.75rem; list-style: none; padding: 0; margin: 0;">
-                <li>Uncertain about upcoming workload</li>
-                <li>Want maximum flexibility in usage timing</li>
-                <li>Prefer to save quota for later just in case</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="w-full max-w-[960px] mt-4">
-      <button id="btn-history-toggle" class="w-full py-3 bg-surface border border-muted5 rounded text-muted2 text-left cursor-pointer hover:bg-surface2 flex justify-between items-center px-4">
-        <span>Usage History</span><span id="history-chevron">▶</span>
+    <div class="w-full max-w-[960px] card">
+      <button id="btn-history-toggle" class="card-toggle">
+        <span class="card-title">Usage History</span><span id="history-chevron" class="card-chevron">›</span>
       </button>
       <div id="history-panel" style="display: none;"></div>
     </div>
 
-    <div class="w-full max-w-[960px] mt-4">
-      <button id="btn-practices-toggle" class="w-full py-3 bg-surface border border-muted5 rounded text-muted2 text-left cursor-pointer hover:bg-surface2">💡 Quota Best Practices</button>
-      <div id="practices-content" class="p-6 bg-surface border border-muted5 rounded mt-1" style="display: none;">
+    <div class="w-full max-w-[960px] card">
+      <button id="btn-practices-toggle" class="card-toggle">
+        <span class="card-title">Quota Best Practices</span><span class="card-chevron">›</span>
+      </button>
+      <div id="practices-content" class="flex flex-col gap-3" style="display: none;">
         <h3>How the Quota System Works</h3>
         <div class="grid gap-4">
-          <div class="p-4 bg-surface2 border border-border2 rounded-lg">
+          <div class="content-card">
             <div class="text-text mb-2" style="font-size: 0.95rem;">Session & Weekly Limits</div>
             <p>5-hour rolling session window + separate weekly cap. Claude.ai and Claude Code share the same pool.</p>
           </div>
-          <div class="p-4 bg-surface2 border border-border2 rounded-lg">
+          <div class="content-card">
             <div class="text-text mb-2" style="font-size: 0.95rem;">Conversation Cost Escalation</div>
             <p>Message 1 in a new conversation: ~500 tokens. Message 30 in same conversation: 40,000+ tokens (entire history re-processed each turn).</p>
           </div>
-          <div class="p-4 bg-surface2 border border-border2 rounded-lg">
+          <div class="content-card">
             <div class="text-text mb-2" style="font-size: 0.95rem;">Peak Hours Impact</div>
             <p>Peak hours (05:00–11:00 PT) reduce effective capacity. Off-peak usage allows higher throughput.</p>
           </div>
@@ -502,12 +458,14 @@
       </div>
     </div>
 
-    <div class="w-full max-w-[960px] mt-4">
-      <button id="btn-pricing-toggle" class="w-full py-3 bg-surface border border-muted5 rounded text-muted2 text-left cursor-pointer hover:bg-surface2">📊 Model Pricing Reference</button>
-      <div id="pricing-content" class="p-6 bg-surface border border-muted5 rounded mt-1" style="display: none;">
+    <div class="w-full max-w-[960px] card">
+      <button id="btn-pricing-toggle" class="card-toggle">
+        <span class="card-title">Model Pricing Reference</span><span class="card-chevron">›</span>
+      </button>
+      <div id="pricing-content" class="flex flex-col gap-3" style="display: none;">
         <h3>Claude Pro Session Capacity by Model</h3>
         <div class="grid gap-4" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
-          <div class="p-4 bg-surface2 border border-border2 rounded-lg flex flex-col gap-3">
+          <div class="content-card flex flex-col gap-3">
             <div class="text-text" style="font-size: 1rem;">Haiku 4.5</div>
             <div class="text-muted2 italic" style="font-size: 0.85rem;">~30% of Sonnet cost</div>
             <div class="flex flex-col gap-2">
@@ -521,7 +479,7 @@
               </div>
             </div>
           </div>
-          <div class="p-4 bg-surface2 border border-border2 rounded-lg flex flex-col gap-3">
+          <div class="content-card flex flex-col gap-3">
             <div class="text-text" style="font-size: 1rem;">Sonnet 4.6</div>
             <div class="text-muted2 italic" style="font-size: 0.85rem;">baseline</div>
             <div class="flex flex-col gap-2">
@@ -535,7 +493,7 @@
               </div>
             </div>
           </div>
-          <div class="p-4 bg-surface2 border border-border2 rounded-lg flex flex-col gap-3">
+          <div class="content-card flex flex-col gap-3">
             <div class="text-text" style="font-size: 1rem;">Opus 4.6</div>
             <div class="text-muted2 italic" style="font-size: 0.85rem;">3–5x Sonnet cost</div>
             <div class="flex flex-col gap-2">
@@ -550,7 +508,7 @@
             </div>
           </div>
         </div>
-        <p class="pricing-note">Numbers are estimates based on typical usage patterns. See docs/pricing-info.md for details.</p>
+        <p class="pricing-note">Numbers are estimates based on typical usage patterns. See <a href="docs/pricing-info.md" target="_blank" rel="noopener" class="reference-link">docs/pricing-info.md</a> for details.</p>
       </div>
     </div>
 

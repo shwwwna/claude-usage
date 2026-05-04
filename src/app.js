@@ -3,7 +3,6 @@ const CONFIG = {
 };
 
 const SHOW_SESSION_KEY = 'claude-usage-show-session';
-const SHOW_PACING_KEY = 'claude-usage-show-pacing';
 const SHOW_HISTORY_KEY = 'claude-usage-show-history';
 
 let textarea;
@@ -74,8 +73,8 @@ function run(options) {
           weeklyHoursLeft: parsed.weekly ? parsed.weekly.hoursLeft : null
         });
         saveLastInput(raw);
-        renderHistory(loadHistory());
       }
+      renderHistory(loadHistory());
     } catch (err) {
       errorEl.textContent = err instanceof Error ? err.message : String(err);
     }
@@ -92,7 +91,7 @@ function setSessionVisible(visible) {
 function updateAlarmButtonLabel() {
   const btn = document.getElementById('btn-alarm-toggle');
   if (!btn) return;
-  btn.textContent = isAlarmEnabled() ? '🔔 Alarm: on' : '🔔 Alarm: off';
+  btn.textContent = isAlarmEnabled() ? 'Alarm: on' : 'Alarm: off';
 }
 
 function exponentToLabel(v) {
@@ -165,25 +164,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
   document.getElementById('btn-practices-toggle').addEventListener('click', function() {
     const content = document.getElementById('practices-content');
+    const chevron = document.querySelector('#btn-practices-toggle .card-chevron');
     const isVisible = content.style.display !== 'none';
     content.style.display = isVisible ? 'none' : 'block';
+    chevron.classList.toggle('open', !isVisible);
     localStorage.setItem(SHOW_PRACTICES_KEY, isVisible ? '0' : '1');
   });
 
   document.getElementById('btn-pricing-toggle').addEventListener('click', function() {
     const content = document.getElementById('pricing-content');
+    const chevron = document.querySelector('#btn-pricing-toggle .card-chevron');
     const isVisible = content.style.display !== 'none';
     content.style.display = isVisible ? 'none' : 'block';
+    chevron.classList.toggle('open', !isVisible);
     localStorage.setItem(SHOW_PRICING_KEY, isVisible ? '0' : '1');
-  });
-
-  document.getElementById('btn-pacing-toggle').addEventListener('click', function() {
-    const content = document.getElementById('pacing-content');
-    const chevron = document.getElementById('pacing-chevron');
-    const isVisible = content.style.display !== 'none';
-    content.style.display = isVisible ? 'none' : 'block';
-    chevron.textContent = isVisible ? '▶' : '▼';
-    localStorage.setItem(SHOW_PACING_KEY, isVisible ? '0' : '1');
   });
 
   document.getElementById('btn-history-toggle').addEventListener('click', function() {
@@ -191,7 +185,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const chevron = document.getElementById('history-chevron');
     const isVisible = panel.style.display !== 'none';
     panel.style.display = isVisible ? 'none' : 'block';
-    chevron.textContent = isVisible ? '▶' : '▼';
+    chevron.classList.toggle('open', !isVisible);
     localStorage.setItem(SHOW_HISTORY_KEY, isVisible ? '0' : '1');
   });
 
@@ -202,23 +196,19 @@ document.addEventListener('DOMContentLoaded', function() {
   const pricingStored = localStorage.getItem(SHOW_PRICING_KEY);
   if (pricingStored === '1') {
     document.getElementById('pricing-content').style.display = 'block';
+    document.querySelector('#btn-pricing-toggle .card-chevron').classList.add('open');
   }
 
   const practicesStored = localStorage.getItem(SHOW_PRACTICES_KEY);
   if (practicesStored === '1') {
     document.getElementById('practices-content').style.display = 'block';
-  }
-
-  const pacingStored = localStorage.getItem(SHOW_PACING_KEY);
-  if (pacingStored === '1') {
-    document.getElementById('pacing-content').style.display = 'block';
-    document.getElementById('pacing-chevron').textContent = '▼';
+    document.querySelector('#btn-practices-toggle .card-chevron').classList.add('open');
   }
 
   const historyStored = localStorage.getItem(SHOW_HISTORY_KEY);
   if (historyStored === '1') {
     document.getElementById('history-panel').style.display = 'block';
-    document.getElementById('history-chevron').textContent = '▼';
+    document.getElementById('history-chevron').classList.add('open');
   }
 
   const last = loadLastInput();
@@ -234,10 +224,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const resetMs = Date.now() + parsed.session.hoursLeft * 3600 * 1000;
         scheduleSessionAlarm(resetMs);
       }
-      if (parsed.session || parsed.weekly) renderHistory(loadHistory());
     } catch (err) {
       errorEl.textContent = err instanceof Error ? err.message : String(err);
     }
+    renderHistory(loadHistory());
   } else {
     renderHistory(loadHistory());
   }
