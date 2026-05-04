@@ -22,3 +22,11 @@ function suggestPacing(actualPct) {
   if (actualPct > 45) return 0.45;
   return 0.3;
 }
+
+function suggestReason(actualPct) {
+  if (actualPct > 85) return "You're nearly out — spread the remaining usage slowly to avoid hitting the cap.";
+  if (actualPct > 75) return "You've used a lot — ease off now so the rest lasts.";
+  if (actualPct > 60) return "Slightly heavy — a gentle slowdown keeps you on track.";
+  if (actualPct > 45) return "Usage is balanced — a mild front-load is fine.";
+  return "You have plenty left — it's safe to use more early and coast later.";
+}

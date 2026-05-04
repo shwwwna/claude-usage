@@ -213,6 +213,8 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent, ses
 
   card.appendChild(buildUnifiedBar(actualPct, targetPct, status));
 
+  card.appendChild(buildLegend(totalHours, hoursLeft, exponent, actualPct));
+
   const pacingControl = document.createElement('div');
   pacingControl.className = 'flex items-center gap-3 text-muted3 mt-2';
   pacingControl.style.fontSize = '0.75rem';
@@ -251,8 +253,6 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent, ses
   pacingControl.appendChild(pacingValueLabel);
 
   card.appendChild(pacingControl);
-
-  card.appendChild(buildLegend(totalHours, hoursLeft, exponent, actualPct));
 
   return card;
 }
@@ -737,6 +737,7 @@ function renderSuggestion(parsed) {
 
   suggestions.forEach(function(s) {
     const suggested = suggestPacing(s.actualPct);
+    const reason = suggestReason(s.actualPct);
     const current = s.key === 'session-exponent' ? sessionExponent : weeklyExponent;
     const shouldUpdate = Math.abs(suggested - current) > 0.05;
 
@@ -764,8 +765,13 @@ function renderSuggestion(parsed) {
       run();
     });
 
+    const explainer = document.createElement('div');
+    explainer.className = 'stat-explainer';
+    explainer.textContent = reason;
+
     item.appendChild(label);
     item.appendChild(value);
+    item.appendChild(explainer);
     if (shouldUpdate) item.appendChild(btn);
 
     items.appendChild(item);
