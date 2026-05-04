@@ -138,6 +138,11 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent, ses
     weeklyCompactRow.appendChild(sessCell);
     card.appendChild(weeklyCompactRow);
 
+    const sessExplainer = document.createElement('div');
+    sessExplainer.className = 'stat-explainer';
+    sessExplainer.textContent = 'Full 5-hour sessions you can complete vs. total windows until reset';
+    card.appendChild(sessExplainer);
+
     if (sessionData) {
       const feasPlaceholder = document.createElement('div');
       feasPlaceholder.id = 'weekly-feasibility-row';
@@ -165,6 +170,46 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent, ses
   statusRow.appendChild(lhs);
   statusRow.appendChild(rhs);
   card.appendChild(statusRow);
+
+  if (label === 'Session') {
+    const remaining = 1 - actualPct / 100;
+    const models = [
+      { name: 'Haiku',  count: Math.round(remaining * 150) },
+      { name: 'Sonnet', count: Math.round(remaining * 45) },
+      { name: 'Opus',   count: Math.round(remaining * 12) },
+    ];
+
+    const msgsBlock = document.createElement('div');
+    msgsBlock.className = 'msgs-estimate-block';
+
+    const msgsHeading = document.createElement('div');
+    msgsHeading.className = 'stat-label';
+    msgsHeading.textContent = 'Est. msgs left';
+    msgsBlock.appendChild(msgsHeading);
+
+    const msgsList = document.createElement('div');
+    msgsList.className = 'msgs-estimate-list';
+
+    models.forEach(function(m) {
+      const row = document.createElement('div');
+      row.className = 'msgs-estimate-row';
+
+      const nameEl = document.createElement('span');
+      nameEl.className = 'msgs-model-name';
+      nameEl.textContent = m.name;
+
+      const countEl = document.createElement('span');
+      countEl.className = 'msgs-model-count';
+      countEl.textContent = m.count;
+
+      row.appendChild(nameEl);
+      row.appendChild(countEl);
+      msgsList.appendChild(row);
+    });
+
+    msgsBlock.appendChild(msgsList);
+    card.appendChild(msgsBlock);
+  }
 
   card.appendChild(buildUnifiedBar(actualPct, targetPct, status));
 
@@ -253,11 +298,38 @@ function buildLegend(totalHours, hoursLeft, exponent, actualPct) {
   const curveNow = Math.pow(actualPct / 100, 1 / e);
   const curveEnd = 1;
 
-  [10,20,30,40,50,60,70,80,90,100].forEach(function(m) {
+  function fmtDateStr(date) {
+    if (date.toDateString() === today) {
+      const h = date.getHours();
+      const min = date.getMinutes();
+      const ampm = h >= 12 ? 'pm' : 'am';
+      const h12 = h % 12 || 12;
+      const mm = min < 10 ? '0' + min : min;
+      return h12 + ':' + mm + ampm;
+    } else {
+      const h = date.getHours();
+      const ampm = h >= 12 ? 'pm' : 'am';
+      const h12 = h % 12 || 12;
+      return DAYS[date.getDay()] + ' ' + h12 + ampm;
+    }
+  }
+
+  // Pre-compute 80% and 90% hit times to extrapolate 100% linearly
+  function computeHitMs(m) {
     const isPast = m <= actualPct;
-    const hitMs = isPast
+    return isPast
       ? windowStartMs + Math.pow(m / 100, 1 / e) * totalMs
       : now + ((Math.pow(m / 100, 1 / e) - curveNow) / (curveEnd - curveNow)) * remainingMs;
+  }
+  const hit80Ms = computeHitMs(80);
+  const hit90Ms = computeHitMs(90);
+  const hit100MsExtrapolated = hit90Ms + (hit90Ms - hit80Ms);
+
+  [10,20,30,40,50,60,70,80,90,100].forEach(function(m) {
+    const isPast = m <= actualPct;
+    const hitMs = m === 100
+      ? (isPast ? computeHitMs(100) : hit100MsExtrapolated)
+      : computeHitMs(m);
     const hitDate = new Date(hitMs);
 
     const item = document.createElement('div');
@@ -269,24 +341,9 @@ function buildLegend(totalHours, hoursLeft, exponent, actualPct) {
     item.appendChild(pctEl);
 
     if (!isPast) {
-      let dateStr;
-      if (hitDate.toDateString() === today) {
-        const h = hitDate.getHours();
-        const min = hitDate.getMinutes();
-        const ampm = h >= 12 ? 'pm' : 'am';
-        const h12 = h % 12 || 12;
-        const mm = min < 10 ? '0' + min : min;
-        dateStr = h12 + ':' + mm + ampm;
-      } else {
-        const h = hitDate.getHours();
-        const ampm = h >= 12 ? 'pm' : 'am';
-        const h12 = h % 12 || 12;
-        dateStr = DAYS[hitDate.getDay()] + ' ' + h12 + ampm;
-      }
-
       const dateEl = document.createElement('div');
       dateEl.className = 'bar-legend-date';
-      dateEl.textContent = dateStr;
+      dateEl.textContent = fmtDateStr(hitDate);
       item.appendChild(dateEl);
 
       const leftEl = document.createElement('div');
@@ -297,6 +354,29 @@ function buildLegend(totalHours, hoursLeft, exponent, actualPct) {
 
     legend.appendChild(item);
   });
+
+  // Add actual reset deadline as a separate row
+  const resetMs = now + hoursLeft * 3600 * 1000;
+  const resetDate = new Date(resetMs);
+  const resetItem = document.createElement('div');
+  resetItem.className = 'bar-legend-item bar-legend-reset';
+
+  const resetPctEl = document.createElement('div');
+  resetPctEl.className = 'bar-legend-pct';
+  resetPctEl.textContent = 'Reset';
+  resetItem.appendChild(resetPctEl);
+
+  const resetDateEl = document.createElement('div');
+  resetDateEl.className = 'bar-legend-date';
+  resetDateEl.textContent = fmtDateStr(resetDate);
+  resetItem.appendChild(resetDateEl);
+
+  const resetLeftEl = document.createElement('div');
+  resetLeftEl.className = 'bar-legend-left';
+  resetLeftEl.textContent = fmtLeft(resetMs - now);
+  resetItem.appendChild(resetLeftEl);
+
+  legend.appendChild(resetItem);
 
   return legend;
 }
@@ -339,10 +419,22 @@ function buildSleepAndWindowsCard(hoursLeft, resetMs, sessionStartMs) {
   card.className = 'card';
   card.dataset.type = 'sleep-windows';
 
+  const titleRow = document.createElement('div');
+  titleRow.className = 'card-title-row';
+
   const title = document.createElement('div');
   title.className = 'card-title';
   title.textContent = 'Sleep & Windows';
-  card.appendChild(title);
+  titleRow.appendChild(title);
+
+  const chevron = document.createElement('span');
+  chevron.className = 'card-chevron';
+  titleRow.appendChild(chevron);
+
+  card.appendChild(titleRow);
+
+  const cardBody = document.createElement('div');
+  cardBody.className = 'card-body';
 
   const sleepRow = document.createElement('div');
   sleepRow.className = 'sleep-row';
@@ -385,13 +477,13 @@ function buildSleepAndWindowsCard(hoursLeft, resetMs, sessionStartMs) {
   }
   sleepRow.appendChild(endSelect);
 
-  card.appendChild(sleepRow);
+  cardBody.appendChild(sleepRow);
 
   let windowsContainer = build5hrWindows(hoursLeft, resetMs, sessionStartMs);
 
   function updateWindows() {
     const newWindows = build5hrWindows(hoursLeft, resetMs, sessionStartMs);
-    card.replaceChild(newWindows, windowsContainer);
+    cardBody.replaceChild(newWindows, windowsContainer);
     windowsContainer = newWindows;
     updateFeasibilityRow();
   }
@@ -399,7 +491,22 @@ function buildSleepAndWindowsCard(hoursLeft, resetMs, sessionStartMs) {
   startSelect.addEventListener('change', updateWindows);
   endSelect.addEventListener('change', updateWindows);
 
-  card.appendChild(windowsContainer);
+  cardBody.appendChild(windowsContainer);
+  card.appendChild(cardBody);
+
+  const SHOW_SLEEP_WINDOWS_KEY = 'claude-usage-show-sleep-windows';
+  const savedState = localStorage.getItem(SHOW_SLEEP_WINDOWS_KEY);
+  const isExpanded = savedState !== '0';
+  cardBody.style.display = isExpanded ? '' : 'none';
+  chevron.textContent = isExpanded ? ' ▼' : ' ▶';
+
+  titleRow.style.cursor = 'pointer';
+  titleRow.addEventListener('click', function() {
+    const nowExpanded = cardBody.style.display !== 'none';
+    cardBody.style.display = nowExpanded ? 'none' : '';
+    chevron.textContent = nowExpanded ? ' ▶' : ' ▼';
+    localStorage.setItem(SHOW_SLEEP_WINDOWS_KEY, nowExpanded ? '0' : '1');
+  });
 
   return card;
 }
@@ -505,53 +612,67 @@ function build5hrWindows(hoursLeft, resetMs, sessionStartMs) {
   header.appendChild(totalHoursEl);
   container.appendChild(header);
 
-  const list = document.createElement('div');
-  list.className = 'windows-items';
-
-  let currentDay = null;
-  let awakeWindowCount = 0;
-  windows.forEach(function(w, i) {
+  // Group windows by day
+  const dayGroups = [];
+  const dayMap = {};
+  windows.forEach(function(w) {
     const dayKey = DAYS[w.start.getDay()];
-    if (dayKey !== currentDay) {
-      currentDay = dayKey;
-      const dayEl = document.createElement('div');
-      dayEl.className = 'windows-day';
-      dayEl.textContent = dayKey;
-      list.appendChild(dayEl);
+    if (!dayMap[dayKey]) {
+      dayMap[dayKey] = [];
+      dayGroups.push({ day: dayKey, items: dayMap[dayKey] });
     }
-
-    const item = document.createElement('div');
-    item.className = 'windows-item' + (w.asleep ? ' windows-item-sleep' : '');
-
-    const num = document.createElement('span');
-    num.className = 'windows-num';
-    if (w.asleep) {
-      num.textContent = '';
-    } else {
-      awakeWindowCount++;
-      num.textContent = awakeWindowCount + '.';
-    }
-
-    const durationMs = w.end.getTime() - w.start.getTime();
-    const durationHours = Math.round(durationMs / (3600 * 1000));
-
-    const range = document.createElement('span');
-    range.className = 'windows-range';
-    range.textContent = fmtTime(w.start) + '–' + fmtTime(w.end);
-
-    if (durationHours !== 5) {
-      const durationSpan = document.createElement('span');
-      durationSpan.className = 'windows-duration';
-      durationSpan.textContent = ' (' + durationHours + 'h)';
-      range.appendChild(durationSpan);
-    }
-
-    item.appendChild(num);
-    item.appendChild(range);
-    list.appendChild(item);
+    dayMap[dayKey].push(w);
   });
 
-  container.appendChild(list);
+  const grid = document.createElement('div');
+  grid.className = 'windows-grid';
+
+  let awakeWindowCount = 0;
+  dayGroups.forEach(function(group) {
+    const col = document.createElement('div');
+    col.className = 'windows-col';
+
+    const dayEl = document.createElement('div');
+    dayEl.className = 'windows-day';
+    dayEl.textContent = group.day;
+    col.appendChild(dayEl);
+
+    group.items.forEach(function(w) {
+      const item = document.createElement('div');
+      item.className = 'windows-item' + (w.asleep ? ' windows-item-sleep' : '');
+
+      const num = document.createElement('span');
+      num.className = 'windows-num';
+      if (w.asleep) {
+        num.textContent = '';
+      } else {
+        awakeWindowCount++;
+        num.textContent = awakeWindowCount + '.';
+      }
+
+      const durationMs = w.end.getTime() - w.start.getTime();
+      const durationHours = Math.round(durationMs / (3600 * 1000));
+
+      const range = document.createElement('span');
+      range.className = 'windows-range';
+      range.textContent = fmtTime(w.start) + '–' + fmtTime(w.end);
+
+      if (durationHours !== 5) {
+        const durationSpan = document.createElement('span');
+        durationSpan.className = 'windows-duration';
+        durationSpan.textContent = ' (' + durationHours + 'h)';
+        range.appendChild(durationSpan);
+      }
+
+      item.appendChild(num);
+      item.appendChild(range);
+      col.appendChild(item);
+    });
+
+    grid.appendChild(col);
+  });
+
+  container.appendChild(grid);
   return container;
 }
 
@@ -650,66 +771,10 @@ function renderHistory(entries) {
   analysisEl.textContent = parts.length ? '7-day avg: ' + parts.join(', ') : '';
   container.appendChild(analysisEl);
 
-  container.appendChild(buildChart(entries));
   container.appendChild(buildHistoryTable(entries));
   container.appendChild(buildHistoryButtons());
 }
 
-function buildChart(entries) {
-  const W = 400, H = 120, PAD = 10;
-  const plotW = W - PAD * 2;
-  const plotH = H - PAD * 2;
-
-  const ns = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(ns, 'svg');
-  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
-  svg.setAttribute('class', 'history-chart');
-
-  const minTs = entries[0].ts;
-  const maxTs = entries[entries.length - 1].ts;
-  const tsRange = maxTs - minTs || 1;
-
-  function toX(ts) { return PAD + ((ts - minTs) / tsRange) * plotW; }
-  function toY(pct) { return PAD + (1 - pct / 100) * plotH; }
-
-  function makeLine(key, cls) {
-    const points = entries
-      .filter(function(e) { return e[key] != null; })
-      .map(function(e) { return toX(e.ts) + ',' + toY(e[key]); })
-      .join(' ');
-    if (!points) return;
-    const poly = document.createElementNS(ns, 'polyline');
-    poly.setAttribute('points', points);
-    poly.setAttribute('class', cls);
-    svg.appendChild(poly);
-
-    entries.filter(function(e) { return e[key] != null; }).forEach(function(e) {
-      const circle = document.createElementNS(ns, 'circle');
-      circle.setAttribute('cx', toX(e.ts));
-      circle.setAttribute('cy', toY(e[key]));
-      circle.setAttribute('r', '3');
-      circle.setAttribute('class', cls + '-dot');
-      svg.appendChild(circle);
-    });
-  }
-
-  makeLine('sessionPct', 'chart-session');
-  makeLine('weeklyPct', 'chart-weekly');
-
-  const dateWrap = document.createElement('div');
-  dateWrap.className = 'chart-dates';
-  const d1 = new Date(minTs);
-  const d2 = new Date(maxTs);
-  dateWrap.innerHTML =
-    '<span>' + d1.toLocaleDateString() + '</span>' +
-    '<span>' + d2.toLocaleDateString() + '</span>';
-
-  const wrap = document.createElement('div');
-  wrap.className = 'chart-wrap';
-  wrap.appendChild(svg);
-  wrap.appendChild(dateWrap);
-  return wrap;
-}
 
 function buildHistoryTable(entries) {
   const sessions = groupBySession(entries);
@@ -725,19 +790,28 @@ function buildHistoryTable(entries) {
     const sessionHeader = document.createElement('div');
     sessionHeader.className = 'session-header';
 
-    const startDate = new Date(session.startTime);
-    const endDate = new Date(session.endTime);
-    const durationMin = Math.round(session.durationMs / 60000);
-    const durationHours = Math.floor(durationMin / 60);
-    const durationMins = durationMin % 60;
-    const durationStr = durationHours > 0
-      ? durationHours + 'h ' + durationMins + 'm'
-      : durationMins + 'm';
+    const resetDate = new Date(session.resetTime);
+    const recordedDurationMin = Math.round(session.durationMs / 60000);
+    const recordedDurationHours = Math.floor(recordedDurationMin / 60);
+    const recordedDurationMins = recordedDurationMin % 60;
+    const recordedDurationStr = recordedDurationHours > 0
+      ? recordedDurationHours + 'h ' + recordedDurationMins + 'm'
+      : recordedDurationMins + 'm';
 
-    const dateStr = startDate.toLocaleDateString() + ' ' + startDate.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const month = resetDate.getMonth() + 1;
+    const day = resetDate.getDate();
+    const dayName = DAYS[resetDate.getDay()];
+    const h = resetDate.getHours();
+    const m = resetDate.getMinutes();
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    const mm = m < 10 ? '0' + m : m;
+    const dateStr = month + '/' + day + ' ' + dayName + ' ' + h12 + ':' + mm + ' ' + ampm;
+
     const durationEl = document.createElement('span');
     durationEl.className = 'session-duration';
-    durationEl.textContent = '(' + durationStr + ')';
+    durationEl.textContent = '(' + recordedDurationStr + ')';
 
     sessionHeader.innerHTML = '<span class="session-date">' + dateStr + '</span>';
     sessionHeader.appendChild(durationEl);

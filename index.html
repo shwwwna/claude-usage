@@ -6,20 +6,377 @@
     <title>Claude Usage Tracker</title>
     <link rel="manifest" href="manifest.json" />
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css" />
     <meta name="theme-color" content="#0f0f11" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Claude Usage" />
+    <script src="src/tailwindcss.min.js"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              base: '#0f0f11',
+              surface: '#1c1c1f',
+              surface2: '#26262a',
+              border: '#2a2a2e',
+              border2: '#3a3a3f',
+              text: '#e8e8ed',
+              muted1: '#ccc',
+              muted2: '#aaa',
+              muted3: '#888',
+              muted4: '#666',
+              muted5: '#555',
+              'red-over': '#ef4444',
+              'red-light': '#f87171',
+              'red-pale': '#fca5a5',
+              'red-dark': '#450a0a',
+              'red-alarm': '#e14b4b',
+              'green-under': '#22c55e',
+              'green-light': '#86efac',
+              'green-dark': '#052e16',
+              'green-mid': '#2d5a2d',
+              'indigo-accent': '#6366f1',
+              'indigo-light': '#a5b4fc',
+              'indigo-dark': '#1e1b4b',
+              'indigo-green': '#1e3a1f',
+              'orange-constrained': '#fdba74',
+              'orange-dark': '#451a03',
+              'legend-bright': '#e0e7ff',
+              'legend-mid': '#c7d2fe',
+              'legend-dim': '#8891c9',
+              'body-text': '#d8d8e8',
+            },
+            fontSize: { base: '24px' },
+            fontFamily: {
+              mono: ['SF Mono', 'Consolas', 'Monaco', 'monospace'],
+            },
+            gridTemplateColumns: {
+              10: 'repeat(10, minmax(0, 1fr))',
+            },
+            animation: {
+              'alarm-pulse': 'alarm-pulse 1.2s ease-in-out infinite',
+            },
+            keyframes: {
+              'alarm-pulse': {
+                '0%, 100%': { backgroundColor: 'rgba(0,0,0,0.75)' },
+                '50%': { backgroundColor: 'rgba(80,0,0,0.85)' },
+              },
+            },
+          },
+        },
+      }
+    </script>
+    <style type="text/tailwindcss">
+      /* === BASE LAYER === */
+      @layer base {
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { font-size: 24px; }
+        body {
+          @apply bg-base text-text flex flex-col items-center py-8 px-4 gap-6;
+          min-height: 100vh;
+        }
+        h1 { @apply text-white font-semibold; font-size: 1.25rem; }
+        textarea {
+          @apply w-full bg-surface border border-border rounded-lg p-3 font-mono text-text resize-y;
+          min-height: 210px;
+          font-size: 0.75rem;
+          transition: border-color 0.15s;
+        }
+        textarea:focus { @apply outline-none border-muted4; }
+        button {
+          @apply px-3 py-1 bg-surface2 text-muted1 rounded cursor-pointer;
+          font-size: 0.75rem;
+          border: 1px solid #3a3a3f;
+          transition: background 0.15s, color 0.15s;
+        }
+        button:hover { @apply bg-border text-text; }
+
+        /* data-attribute selectors — cannot be expressed as Tailwind utilities */
+        body.session-hidden .card[data-type="session"] { display: none; }
+        body.session-hidden .pacing-row[data-type="session"] { display: none; }
+        body.session-hidden .suggestion-item[data-type="session"] { display: none; }
+      }
+
+      /* === COMPONENT LAYER (all JS-assigned class names) === */
+      @layer components {
+        /* Cards */
+        .card {
+          @apply bg-surface border border-border rounded-xl flex flex-col gap-3 p-4 w-full;
+        }
+        .card-title {
+          @apply text-muted3 uppercase tracking-widest;
+          font-size: 0.7rem;
+        }
+
+        /* Stat rows */
+        .stat-row { @apply flex justify-between items-baseline; }
+        .compact-meta-row { @apply flex gap-6 flex-wrap; }
+        .compact-meta-cell { @apply flex items-baseline gap-1; }
+        .stat-label { @apply text-muted2; font-size: 0.8rem; }
+        .stat-value { @apply font-semibold tabular-nums; font-size: 1rem; }
+        .stat-explainer { @apply text-muted4; font-size: 0.65rem; margin-top: -0.2rem; }
+
+        /* Fraction values */
+        .fraction-value { font-size: 0.85rem; }
+        .frac-actual { @apply text-text; }
+        .frac-sep { @apply text-muted5; font-size: 0.75rem; margin: 0 0.1rem; }
+        .frac-target { @apply text-muted3; }
+
+        /* Badges */
+        .badge { @apply font-bold rounded; font-size: 0.7rem; padding: 0.15rem 0.5rem; }
+        .badge-over { @apply bg-red-dark text-red-pale; }
+        .badge-under { @apply bg-green-dark text-green-light; }
+        .badge-on { @apply bg-indigo-dark text-indigo-light; }
+        .badge-constrained { @apply bg-orange-dark text-orange-constrained; }
+
+        /* Diff values */
+        .diff-value { @apply tabular-nums; }
+        .diff-over { @apply text-red-pale; }
+        .diff-under { @apply text-green-light; }
+        .diff-on { @apply text-indigo-light; }
+
+        /* Progress bar */
+        .bar-track {
+          @apply relative w-full bg-border rounded;
+          height: 12px;
+        }
+        .bar-track.unified { @apply overflow-visible; }
+        .bar-target-fill {
+          @apply absolute top-0 left-0 h-full rounded;
+          background: hsla(0, 0%, 100%, 0.4);
+          transition: width 0.4s ease;
+        }
+        .bar-actual-fill {
+          @apply absolute top-0 left-0 h-full rounded mix-blend-screen;
+          transition: width 0.4s ease;
+        }
+        .bar-actual-fill.status-under,
+        .bar-actual-fill.status-on { background: rgba(34, 197, 94, 0.7); }
+        .bar-actual-fill.status-over { background: rgba(239, 68, 68, 0.75); }
+
+        .bar-target-marker {
+          @apply absolute top-0 w-px;
+          height: 100%;
+          background: #a5b4fc;
+          box-shadow: 0 0 4px #a5b4fc;
+        }
+        .bar-endpoint-dot {
+          @apply absolute rounded-full;
+          width: 14px; height: 14px;
+          top: 50%; transform: translateY(-50%);
+        }
+        .bar-endpoint-dot.status-under,
+        .bar-endpoint-dot.status-on { @apply bg-green-under; }
+        .bar-endpoint-dot.status-over { @apply bg-red-over; }
+        .bar-tick {
+          @apply absolute top-0 h-full;
+          width: 1px;
+          background: rgba(255,255,255,0.35);
+        }
+
+        /* Cards - accordion support */
+        .card-title-row { @apply flex justify-between items-center; }
+        .card-chevron { @apply text-muted4; font-size: 0.65rem; }
+
+        /* Bar legend */
+        .bar-legend { @apply grid w-full; grid-template-columns: repeat(10, 1fr); }
+        .bar-legend-item { @apply flex flex-col items-center; }
+        .bar-legend-item.legend-past { @apply line-through text-muted5; }
+        .bar-legend-item.bar-legend-reset {
+          grid-column: 10;
+          grid-row: 2;
+          @apply flex flex-col items-center border-t border-muted5 pt-1;
+          margin-top: 0.15rem;
+        }
+        .bar-legend-pct { @apply tabular-nums text-legend-bright; font-size: 0.6rem; }
+        .bar-legend-date { @apply tabular-nums text-legend-mid; font-size: 0.55rem; }
+        .bar-legend-left { @apply tabular-nums text-legend-dim; font-size: 0.5rem; }
+        .bar-legend-reset .bar-legend-pct { @apply text-muted3; }
+
+        /* Sleep controls */
+        .sleep-row { @apply flex items-center gap-2 text-muted3; font-size: 0.75rem; }
+        .sleep-label { @apply text-muted4 whitespace-nowrap; }
+        .sleep-select {
+          @apply bg-surface border border-muted5 rounded text-muted2;
+          font-size: 0.75rem; padding: 0.1rem 0.3rem;
+        }
+        .sleep-select:focus { @apply outline-none border-muted4; }
+        .sleep-sep { @apply text-muted5; }
+
+        /* Windows list */
+        .windows-list { @apply flex flex-col gap-1; }
+        .windows-header { @apply flex justify-between items-baseline; }
+        .windows-total { @apply text-muted5; font-size: 0.65rem; }
+        .windows-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 0.75rem;
+          margin-top: 0.5rem;
+        }
+        .windows-col { @apply flex flex-col; gap: 0.1rem; }
+        .windows-day { @apply text-muted4 uppercase; font-size: 0.6rem; margin-bottom: 0.2rem; }
+        .windows-item { @apply flex gap-2 text-muted1; font-size: 0.72rem; }
+        .windows-item-sleep { @apply text-muted4; }
+        .windows-num { @apply tabular-nums text-right; min-width: 1.2rem; flex-shrink: 0; }
+        .windows-range { @apply text-body-text font-medium; }
+        .windows-range .windows-duration { @apply text-muted2; margin-left: 0.3em; }
+
+        /* Suggestion section */
+        .suggestion-section {
+          @apply flex flex-col gap-3 p-4 rounded-xl border w-full;
+          background: linear-gradient(135deg, #1e3a1f, #1c2a1f);
+          border-color: #2d5a2d;
+        }
+        .suggestion-heading { @apply text-green-light uppercase tracking-widest; font-size: 0.75rem; }
+        .suggestion-items { @apply flex flex-col gap-2; }
+        .suggestion-item {
+          @apply flex justify-between items-center p-2 rounded;
+          background: rgba(134, 239, 172, 0.05);
+        }
+        .suggestion-item.suggestion-update {
+          background: rgba(134, 239, 172, 0.1);
+          border: 1px solid rgba(134, 239, 172, 0.2);
+        }
+        .suggestion-label { @apply text-muted2; font-size: 0.8rem; }
+        .suggestion-value { @apply text-green-light uppercase; font-size: 0.85rem; }
+        .suggestion-btn {
+          @apply rounded cursor-pointer;
+          padding: 0.3rem 0.7rem;
+          background: #2d5a2d;
+          color: #86efac;
+          border: 1px solid #3a6a3a;
+          font-size: 0.75rem;
+        }
+        .suggestion-btn:hover { background: #3a6a3a; }
+
+        /* History */
+        .history-empty { @apply text-muted3 text-center; font-size: 0.85rem; }
+        .history-title { @apply text-indigo-light; font-size: 0.95rem; }
+        .history-analysis { @apply text-muted3; font-size: 0.8rem; }
+        .history-table { @apply font-mono w-full border-collapse; font-size: 0.8rem; }
+        .history-table th { @apply text-muted3 text-left; border-bottom: 1px solid #2a2a2e; padding: 0.3rem 0.5rem; }
+        .history-table td { @apply text-muted1; border-bottom: 1px solid #1c1c1f; padding: 0.3rem 0.5rem; }
+        .history-btn-row { @apply flex gap-2 flex-wrap; }
+        .btn-history {
+          @apply bg-surface rounded cursor-pointer text-muted1;
+          font-size: 0.78rem;
+          padding: 0.3rem 0.7rem;
+          border: 1px solid #2a2a2e;
+        }
+        .btn-history:hover { @apply bg-border; }
+        .btn-history-clear { @apply text-red-light; border-color: #450a0a; }
+        .btn-history-delete {
+          @apply hidden text-red-light cursor-pointer;
+          border-color: #3a1f1f;
+          font-size: 0.75rem;
+        }
+        /* reveal delete button on row hover — parent hover, can't be Tailwind utility */
+        .history-table tbody tr:hover .btn-history-delete { display: inline-block; }
+
+        /* Session grouping */
+        .history-sessions-container { @apply flex flex-col gap-6; }
+        .history-session {
+          @apply bg-surface rounded-lg p-3;
+          border-left: 3px solid #6366f1;
+        }
+        .session-header {
+          @apply flex justify-between items-center pb-2 mb-2;
+          font-size: 0.85rem;
+          border-bottom: 1px solid #2a2a2e;
+        }
+        .session-date { @apply text-indigo-light; }
+        .session-duration { @apply text-muted3; font-size: 0.75rem; }
+
+        /* Messages estimate */
+        .msgs-estimate-block { @apply flex flex-col gap-1; }
+        .msgs-estimate-list { @apply flex flex-col; gap: 0.2rem; }
+        .msgs-estimate-row { @apply flex items-baseline gap-2; }
+        .msgs-model-name { @apply text-muted3; font-size: 0.65rem; }
+        .msgs-model-count { @apply text-muted1 tabular-nums; font-size: 0.65rem; }
+
+        /* Alarm modal */
+        .alarm-modal-overlay {
+          @apply fixed inset-0 z-[9999] flex items-center justify-center;
+          background: rgba(0,0,0,0.75);
+          animation: alarm-pulse 1.2s ease-in-out infinite;
+        }
+        .alarm-modal {
+          @apply bg-surface rounded-xl p-8 text-center max-w-sm w-full mx-4;
+          border: 2px solid #e14b4b;
+          box-shadow: 0 0 40px rgba(225, 75, 75, 0.4);
+        }
+        .alarm-modal-title { @apply text-white mb-3; font-size: 1.5rem; }
+        .alarm-modal-body { @apply text-muted1 mb-6; font-size: 0.95rem; }
+        .alarm-dismiss-btn {
+          @apply bg-red-alarm text-white rounded cursor-pointer font-medium;
+          padding: 0.75rem 2rem;
+          font-size: 1rem;
+          border: none;
+        }
+        .alarm-dismiss-btn:hover { @apply bg-red-light; }
+
+        /* Live clock */
+        .live-clock { @apply text-center; letter-spacing: 0.02em; margin: 0.5rem 0; }
+        .live-clock .clock-day { @apply text-muted3 font-medium; font-size: 2.5rem; }
+        .live-clock .clock-time { @apply font-bold tabular-nums; font-size: 4.5rem; }
+
+        /* Accordion content h3 */
+        #practices-content h3,
+        #pricing-content h3 {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #fff;
+          margin-bottom: 1rem;
+          margin-top: 1.5rem;
+        }
+        #practices-content h3:first-child,
+        #pricing-content h3:first-child { margin-top: 0; }
+
+        /* Practices list */
+        .practices-list { list-style: none; padding: 0; margin: 0 0 1.5rem 0; }
+        .practices-list li {
+          padding: 0.75rem 0 0.75rem 1.5rem;
+          position: relative;
+          font-size: 0.95rem;
+          color: #d8d8e8;
+          line-height: 1.5;
+        }
+        .practices-list li::before { content: '→'; position: absolute; left: 0; color: #666; }
+        .practices-list li strong { color: #e8e8ed; font-weight: 600; }
+        .avoid-list li::before { content: '✕'; color: #ef4444; }
+
+        /* Notes */
+        .reference-note,
+        .pricing-note { font-size: 0.85rem; color: #666; margin-top: 1rem; }
+        .reference-link { color: #818cf8; text-decoration: none; }
+        .reference-link:hover { text-decoration: underline; }
+
+        /* Range input sliders */
+        input[type=range] {
+          flex: 1;
+          accent-color: #6366f1;
+          cursor: pointer;
+        }
+
+        /* Pacing cards bullets */
+        .grid.grid-cols-4 > div ul li::before {
+          content: '→ ';
+          color: #6366f1;
+          font-weight: 600;
+          margin-right: 0.3rem;
+        }
+      }
+    </style>
   </head>
   <body>
     <h1>Claude Usage Tracker</h1>
 
-    <div class="input-area">
+    <div class="flex flex-col gap-2 w-full max-w-[960px]">
       <textarea
         id="input"
         placeholder="Paste usage text from claude.ai/settings/usage&#10;&#10;Example:&#10;Current session&#10;Resets in 1 hr 30 min&#10;74% used&#10;&#10;Weekly limits&#10;All models&#10;Resets Fri 5:59 AM&#10;65% used"
       ></textarea>
-      <div class="btn-row">
+      <div class="flex gap-2 flex-wrap">
         <button id="btn-open-usage">⬡ Open Claude Usage</button>
         <button id="btn-paste">Paste</button>
         <button id="btn-clear">Clear</button>
@@ -28,91 +385,204 @@
       </div>
     </div>
 
-    <div id="error"></div>
+    <div id="error" class="w-full max-w-[960px] text-red-light" style="font-size: 0.8rem; min-height: 1.2rem;"></div>
 
-    <div class="results" id="results"></div>
+    <div class="flex flex-col gap-4 w-full max-w-[960px]" id="results"></div>
 
-    <div id="suggestion"></div>
+    <div id="suggestion" class="w-full max-w-[960px]"></div>
 
-    <div class="pacing-controls">
-      <div class="pacing-row" data-type="session">
-        <label for="session-exponent">Session pacing:</label>
-        <input
-          type="range"
-          id="session-exponent"
-          min="0"
-          max="1"
-          step="0.01"
-          value="0.55"
-        />
-        <span id="session-exponent-label">Front-loaded</span>
-      </div>
-      <div class="pacing-row">
-        <label for="weekly-exponent">Weekly pacing:</label>
-        <input
-          type="range"
-          id="weekly-exponent"
-          min="0"
-          max="1"
-          step="0.01"
-          value="0.65"
-        />
-        <span id="weekly-exponent-label">Front-loaded</span>
+    <div class="w-full max-w-[960px] mt-4">
+      <button id="btn-pacing-toggle" class="w-full py-3 bg-surface border border-muted5 rounded text-muted2 text-left cursor-pointer hover:bg-surface2 flex justify-between items-center px-4">
+        <span>Pacing</span><span id="pacing-chevron">▶</span>
+      </button>
+      <div id="pacing-content" style="display: none;">
+        <div class="flex flex-col gap-3 w-full pt-3">
+          <div class="flex items-center gap-3 text-muted3" data-type="session" style="font-size: 0.75rem;">
+            <label for="session-exponent" style="min-width: 9rem;">Session pacing:</label>
+            <input
+              type="range"
+              id="session-exponent"
+              min="0"
+              max="1"
+              step="0.01"
+              value="0.55"
+            />
+            <span id="session-exponent-label" style="min-width: 8rem; color: #a5b4fc;">Front-loaded</span>
+          </div>
+          <div class="flex items-center gap-3 text-muted3" style="font-size: 0.75rem;">
+            <label for="weekly-exponent" style="min-width: 9rem;">Weekly pacing:</label>
+            <input
+              type="range"
+              id="weekly-exponent"
+              min="0"
+              max="1"
+              step="0.01"
+              value="0.65"
+            />
+            <span id="weekly-exponent-label" style="min-width: 8rem; color: #a5b4fc;">Front-loaded</span>
+          </div>
+        </div>
+        <div class="w-full mt-4">
+          <div class="grid grid-cols-4 gap-4">
+            <div class="flex flex-col gap-2 p-4 rounded-xl border border-border bg-gradient-to-br from-surface to-base">
+              <div class="text-indigo-light uppercase tracking-wide" style="font-size: 0.85rem;">Aggressive</div>
+              <div class="text-muted3 italic" style="font-size: 0.75rem;">Use most of your quota early</div>
+              <ul class="flex flex-col gap-1 text-muted2" style="font-size: 0.75rem; list-style: none; padding: 0; margin: 0;">
+                <li>Heavy usage planned for today/early in the week</li>
+                <li>Need fast iteration on urgent work</li>
+                <li>Know you'll have lighter usage later</li>
+              </ul>
+            </div>
+            <div class="flex flex-col gap-2 p-4 rounded-xl border border-border bg-gradient-to-br from-surface to-base">
+              <div class="text-indigo-light uppercase tracking-wide" style="font-size: 0.85rem;">Front-loaded</div>
+              <div class="text-muted3 italic" style="font-size: 0.75rem;">Slightly skew toward early usage</div>
+              <ul class="flex flex-col gap-1 text-muted2" style="font-size: 0.75rem; list-style: none; padding: 0; margin: 0;">
+                <li>Plan to work more early, taper off later</li>
+                <li>Natural daily/weekly rhythm with productivity peaks</li>
+                <li>Most common for balanced workflows (default)</li>
+              </ul>
+            </div>
+            <div class="flex flex-col gap-2 p-4 rounded-xl border border-border bg-gradient-to-br from-surface to-base">
+              <div class="text-indigo-light uppercase tracking-wide" style="font-size: 0.85rem;">Slight Push</div>
+              <div class="text-muted3 italic" style="font-size: 0.75rem;">
+                Nearly even, slight preference for later
+              </div>
+              <ul class="flex flex-col gap-1 text-muted2" style="font-size: 0.75rem; list-style: none; padding: 0; margin: 0;">
+                <li>Want flexibility and steady usage throughout</li>
+                <li>No strong pattern of high or low periods</li>
+                <li>Prefer not to rush early on</li>
+              </ul>
+            </div>
+            <div class="flex flex-col gap-2 p-4 rounded-xl border border-border bg-gradient-to-br from-surface to-base">
+              <div class="text-indigo-light uppercase tracking-wide" style="font-size: 0.85rem;">Conservative</div>
+              <div class="text-muted3 italic" style="font-size: 0.75rem;">
+                Spread usage evenly across the period
+              </div>
+              <ul class="flex flex-col gap-1 text-muted2" style="font-size: 0.75rem; list-style: none; padding: 0; margin: 0;">
+                <li>Uncertain about upcoming workload</li>
+                <li>Want maximum flexibility in usage timing</li>
+                <li>Prefer to save quota for later just in case</li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="pacing-tips">
-      <div class="tips-grid">
-        <div class="tip-card">
-          <div class="tip-level">Aggressive</div>
-          <div class="tip-description">Use most of your quota early</div>
-          <ul class="tip-list">
-            <li>Heavy usage planned for today/early in the week</li>
-            <li>Need fast iteration on urgent work</li>
-            <li>Know you'll have lighter usage later</li>
-          </ul>
-        </div>
-        <div class="tip-card">
-          <div class="tip-level">Front-loaded</div>
-          <div class="tip-description">Slightly skew toward early usage</div>
-          <ul class="tip-list">
-            <li>Plan to work more early, taper off later</li>
-            <li>Natural daily/weekly rhythm with productivity peaks</li>
-            <li>Most common for balanced workflows (default)</li>
-          </ul>
-        </div>
-        <div class="tip-card">
-          <div class="tip-level">Slight Push</div>
-          <div class="tip-description">
-            Nearly even, slight preference for later
+    <div class="w-full max-w-[960px] mt-4">
+      <button id="btn-history-toggle" class="w-full py-3 bg-surface border border-muted5 rounded text-muted2 text-left cursor-pointer hover:bg-surface2 flex justify-between items-center px-4">
+        <span>Usage History</span><span id="history-chevron">▶</span>
+      </button>
+      <div id="history-panel" style="display: none;"></div>
+    </div>
+
+    <div class="w-full max-w-[960px] mt-4">
+      <button id="btn-practices-toggle" class="w-full py-3 bg-surface border border-muted5 rounded text-muted2 text-left cursor-pointer hover:bg-surface2">💡 Quota Best Practices</button>
+      <div id="practices-content" class="p-6 bg-surface border border-muted5 rounded mt-1" style="display: none;">
+        <h3>How the Quota System Works</h3>
+        <div class="grid gap-4">
+          <div class="p-4 bg-surface2 border border-border2 rounded-lg">
+            <div class="text-text mb-2" style="font-size: 0.95rem;">Session & Weekly Limits</div>
+            <p>5-hour rolling session window + separate weekly cap. Claude.ai and Claude Code share the same pool.</p>
           </div>
-          <ul class="tip-list">
-            <li>Want flexibility and steady usage throughout</li>
-            <li>No strong pattern of high or low periods</li>
-            <li>Prefer not to rush early on</li>
-          </ul>
-        </div>
-        <div class="tip-card">
-          <div class="tip-level">Conservative</div>
-          <div class="tip-description">
-            Spread usage evenly across the period
+          <div class="p-4 bg-surface2 border border-border2 rounded-lg">
+            <div class="text-text mb-2" style="font-size: 0.95rem;">Conversation Cost Escalation</div>
+            <p>Message 1 in a new conversation: ~500 tokens. Message 30 in same conversation: 40,000+ tokens (entire history re-processed each turn).</p>
           </div>
-          <ul class="tip-list">
-            <li>Uncertain about upcoming workload</li>
-            <li>Want maximum flexibility in usage timing</li>
-            <li>Prefer to save quota for later just in case</li>
-          </ul>
+          <div class="p-4 bg-surface2 border border-border2 rounded-lg">
+            <div class="text-text mb-2" style="font-size: 0.95rem;">Peak Hours Impact</div>
+            <p>Peak hours (05:00–11:00 PT) reduce effective capacity. Off-peak usage allows higher throughput.</p>
+          </div>
         </div>
+
+        <h3>High-Leverage Habits</h3>
+        <ul class="practices-list">
+          <li><strong>Start new conversations frequently</strong> — 5 conversations of 10 messages each cost far less than one 50-message conversation.</li>
+          <li><strong>Default to Sonnet</strong> — Opus costs 3–5x more. Use it only for complex reasoning, architecture, nuanced writing.</li>
+          <li><strong>Use Projects with cached documents</strong> — Upload reference materials once; they don't count against limits on reuse.</li>
+          <li><strong>Batch questions into single messages</strong> — Group related questions to reduce back-and-forth.</li>
+          <li><strong>Write complete prompts upfront</strong> — Include all context and constraints in one message.</li>
+          <li><strong>Keep CLAUDE.md lean (&lt;150 lines)</strong> — Every word loads on every session. Cut anything non-behavioral.</li>
+          <li><strong>Use /clear aggressively</strong> — Start fresh to avoid old history eating tokens.</li>
+          <li><strong>Use .claudeignore</strong> — Prevents Claude from reading unneeded files.</li>
+          <li><strong>Point to specific files, not whole repo</strong> — Scoping prevents hundreds of file reads.</li>
+          <li><strong>Use plan mode for non-trivial work</strong> — Prevents wrong paths and wasted tokens.</li>
+        </ul>
+
+        <h3>Anti-Patterns to Avoid</h3>
+        <ul class="practices-list avoid-list">
+          <li>Don't keep one mega-conversation — it re-sends full history every message.</li>
+          <li>Don't default to Opus for everything.</li>
+          <li>Don't re-paste documents — use Projects to cache them.</li>
+          <li>Don't send vague one-liners that need clarification rounds.</li>
+          <li>Don't let Claude explore the whole repo unscoped.</li>
+          <li>Don't overload CLAUDE.md with aspirational text.</li>
+          <li>Don't use @-file for large documents — reference paths instead.</li>
+          <li>Don't ignore the usage dashboard.</li>
+          <li>Don't run Claude Code in loops without rate-limit handling.</li>
+        </ul>
+
+        <p class="reference-note"><a href="docs/quota-best-practices.md" target="_blank" rel="noopener" class="reference-link">Full guide: docs/quota-best-practices.md</a></p>
       </div>
     </div>
 
-    <div id="history-panel"></div>
+    <div class="w-full max-w-[960px] mt-4">
+      <button id="btn-pricing-toggle" class="w-full py-3 bg-surface border border-muted5 rounded text-muted2 text-left cursor-pointer hover:bg-surface2">📊 Model Pricing Reference</button>
+      <div id="pricing-content" class="p-6 bg-surface border border-muted5 rounded mt-1" style="display: none;">
+        <h3>Claude Pro Session Capacity by Model</h3>
+        <div class="grid gap-4" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+          <div class="p-4 bg-surface2 border border-border2 rounded-lg flex flex-col gap-3">
+            <div class="text-text" style="font-size: 1rem;">Haiku 4.5</div>
+            <div class="text-muted2 italic" style="font-size: 0.85rem;">~30% of Sonnet cost</div>
+            <div class="flex flex-col gap-2">
+              <div class="flex justify-between items-baseline" style="font-size: 0.9rem;">
+                <span class="text-muted2 flex-1">Per 5-hour window:</span>
+                <span class="text-legend-mid font-medium">~150 messages</span>
+              </div>
+              <div class="flex justify-between items-baseline" style="font-size: 0.9rem;">
+                <span class="text-muted2 flex-1">Weekly capacity:</span>
+                <span class="text-legend-mid font-medium">~36–44 full sessions</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-4 bg-surface2 border border-border2 rounded-lg flex flex-col gap-3">
+            <div class="text-text" style="font-size: 1rem;">Sonnet 4.6</div>
+            <div class="text-muted2 italic" style="font-size: 0.85rem;">baseline</div>
+            <div class="flex flex-col gap-2">
+              <div class="flex justify-between items-baseline" style="font-size: 0.9rem;">
+                <span class="text-muted2 flex-1">Per 5-hour window:</span>
+                <span class="text-legend-mid font-medium">~45 messages</span>
+              </div>
+              <div class="flex justify-between items-baseline" style="font-size: 0.9rem;">
+                <span class="text-muted2 flex-1">Weekly capacity:</span>
+                <span class="text-legend-mid font-medium">~9–11 full sessions</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-4 bg-surface2 border border-border2 rounded-lg flex flex-col gap-3">
+            <div class="text-text" style="font-size: 1rem;">Opus 4.6</div>
+            <div class="text-muted2 italic" style="font-size: 0.85rem;">3–5x Sonnet cost</div>
+            <div class="flex flex-col gap-2">
+              <div class="flex justify-between items-baseline" style="font-size: 0.9rem;">
+                <span class="text-muted2 flex-1">Per 5-hour window:</span>
+                <span class="text-legend-mid font-medium">~9–15 messages</span>
+              </div>
+              <div class="flex justify-between items-baseline" style="font-size: 0.9rem;">
+                <span class="text-muted2 flex-1">Weekly capacity:</span>
+                <span class="text-legend-mid font-medium">~2–3 peak / ~4–6 off-peak</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="pricing-note">Numbers are estimates based on typical usage patterns. See docs/pricing-info.md for details.</p>
+      </div>
+    </div>
 
-    <script src="parser.js"></script>
-    <script src="stats.js"></script>
-    <script src="history.js"></script>
-    <script src="alarm.js"></script>
-    <script src="renderer.js"></script>
-    <script src="app.js"></script>
+    <script src="src/parser.js"></script>
+    <script src="src/stats.js"></script>
+    <script src="src/history.js"></script>
+    <script src="src/alarm.js"></script>
+    <script src="src/renderer.js"></script>
+    <script src="src/app.js"></script>
   </body>
 </html>
