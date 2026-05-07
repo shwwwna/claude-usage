@@ -3,10 +3,9 @@
   "name": "Claude Usage Tracker",
   "version": "1.0.0",
   "description": "Track Claude session and weekly usage without copy-pasting",
-  "permissions": ["storage", "alarms", "tabs", "scripting"],
+  "permissions": ["storage", "alarms", "tabs", "scripting", "windows"],
   "host_permissions": ["https://claude.ai/*"],
   "action": {
-    "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon-16.png",
       "48": "icons/icon-48.png"

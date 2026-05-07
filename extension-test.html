@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Claude Extension Test Suite</title>
+  <style>
+    body {
+      font-family: 'SF Mono', Consolas, Monaco, monospace;
+      background: #0f0f11;
+      color: #e8e8ed;
+      padding: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 { color: #6366f1; margin-bottom: 2rem; }
+    .test-group {
+      background: #1c1c1f;
+      border: 1px solid #2a2a2e;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .test-group h2 {
+      color: #a5b4fc;
+      margin-top: 0;
+      font-size: 1.1rem;
+      border-bottom: 1px solid #2a2a2e;
+      padding-bottom: 0.75rem;
+    }
+    .test-case {
+      background: #26262a;
+      border-left: 3px solid #6366f1;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border-radius: 4px;
+    }
+    .test-case.pass {
+      border-left-color: #22c55e;
+    }
+    .test-case.fail {
+      border-left-color: #ef4444;
+    }
+    .test-title {
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+      font-size: 0.95rem;
+    }
+    .test-result {
+      padding: 0.5rem;
+      border-radius: 3px;
+      font-size: 0.9rem;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .pass { color: #86efac; }
+    .fail { color: #f87171; background: rgba(239, 68, 68, 0.1); }
+    .status {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 3px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+    .status.pass { background: #052e16; color: #86efac; }
+    .status.fail { background: #450a0a; color: #f87171; }
+    .summary {
+      background: #26262a;
+      border: 1px solid #3a3a3f;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-top: 2rem;
+    }
+    .summary h3 { margin-top: 0; color: #a5b4fc; }
+    .stat { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }
+    .stat-label { color: #aaa; }
+    .stat-value { font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>Claude Extension Test Suite</h1>
+  <div id="tests"></div>
+
+  <script src="extension/src/parser.js"></script>
+  <script src="extension/src/stats.js"></script>
+  <script src="extension/src/renderer.js"></script>
+
+  <script>
+    const testResults = { passed: 0, failed: 0, tests: [] };
+
+    function assert(condition, message) {
+      if (!condition) {
+        throw new Error(message);
+      }
+    }
+
+    function test(groupName, testName, fn) {
+      try {
+        fn();
+        testResults.passed++;
+        testResults.tests.push({ groupName, testName, status: 'pass' });
+        return true;
+      } catch (e) {
+        testResults.failed++;
+        testResults.tests.push({ groupName, testName, status: 'fail', error: e.message });
+        return false;
+      }
+    }
+
+    function renderTests() {
+      const testsEl = document.getElementById('tests');
+      const grouped = {};
+
+      testResults.tests.forEach(t => {
+        if (!grouped[t.groupName]) grouped[t.groupName] = [];
+        grouped[t.groupName].push(t);
+      });
+
+      Object.entries(grouped).forEach(([groupName, tests]) => {
+        const groupEl = document.createElement('div');
+        groupEl.className = 'test-group';
+
+        const titleEl = document.createElement('h2');
+        titleEl.textContent = groupName;
+        groupEl.appendChild(titleEl);
+
+        tests.forEach(t => {
+          const testEl = document.createElement('div');
+          testEl.className = `test-case ${t.status}`;
+
+          const statusEl = document.createElement('div');
+          statusEl.className = `status ${t.status}`;
+          statusEl.textContent = t.status.toUpperCase();
+          testEl.appendChild(statusEl);
+
+          const titleEl = document.createElement('div');
+          titleEl.className = 'test-title';
+          titleEl.textContent = t.testName;
+          testEl.appendChild(titleEl);
+
+          if (t.error) {
+            const resultEl = document.createElement('div');
+            resultEl.className = 'test-result fail';
+            resultEl.textContent = t.error;
+            testEl.appendChild(resultEl);
+          }
+
+          groupEl.appendChild(testEl);
+        });
+
+        testsEl.appendChild(groupEl);
+      });
+
+      const summaryEl = document.createElement('div');
+      summaryEl.className = 'summary';
+      summaryEl.innerHTML = `
+        <h3>Test Summary</h3>
+        <div class="stat">
+          <span class="stat-label">Total Tests:</span>
+          <span class="stat-value">${testResults.passed + testResults.failed}</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Passed:</span>
+          <span class="stat-value pass">${testResults.passed}</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Failed:</span>
+          <span class="stat-value ${testResults.failed > 0 ? 'fail' : ''}">${testResults.failed}</span>
+        </div>
+      `;
+      testsEl.appendChild(summaryEl);
+    }
+
+    // ===== PHASE 1: PARSER TESTS =====
+    test('Phase 1: Parser', 'Parse session usage with hours remaining', () => {
+      const text = 'Current Session: 45% used. Resets in 1 hr 30 min. Weekly Limits: 78% used. Resets Fri 5:59 AM';
+      const result = parseUsageText(text);
+      assert(result.session && result.session.actualPct === 45, 'Session percent not 45');
+      assert(result.session && result.session.hoursLeft === 1.5, 'Session hours not 1.5');
+      assert(result.weekly && result.weekly.actualPct === 78, 'Weekly percent not 78');
+    });
+
+    test('Phase 1: Parser', 'Parse session with minutes only', () => {
+      const text = 'Current Session: 20% used. Resets in 45 min. Weekly Limits: 50% used. Resets Fri 5:59 AM';
+      const result = parseUsageText(text);
+      assert(result.session && result.session.hoursLeft === 45/60, 'Session hours should be 0.75');
+    });
+
+    test('Phase 1: Parser', 'Parse weekly with day and time', () => {
+      const text = 'Current Session: 10% used. Resets in 2 hr. Weekly Limits: 60% used. Resets Saturday 11:59 PM';
+      const result = parseUsageText(text);
+      assert(result.weekly && result.weekly.actualPct === 60, 'Weekly percent not 60');
+      assert(result.weekly && result.weekly.hoursLeft > 0, 'Weekly hours should be positive');
+    });
+
+    test('Phase 1: Parser', 'Parse with duration format (days + hours)', () => {
+      const text = 'Current Session: 5% used. Resets in 30 min. Weekly Limits: 30% used. Resets in 2 days 5 hr';
+      const result = parseUsageText(text);
+      assert(result.weekly && result.weekly.hoursLeft === 2 * 24 + 5, 'Weekly hours should be 53');
+    });
+
+    test('Phase 1: Parser', 'Handle case-insensitive matching', () => {
+      const text = 'CURRENT SESSION: 75% USED. RESETS IN 3 hr. WEEKLY LIMITS: 80% USED. RESETS MONDAY 8:00 AM';
+      const result = parseUsageText(text);
+      assert(result.session && result.session.actualPct === 75, 'Case insensitive failed');
+    });
+
+    test('Phase 1: Parser', 'Reject missing session data', () => {
+      const text = 'Some random text without usage data';
+      try {
+        parseUsageText(text);
+        assert(false, 'Should have thrown error');
+      } catch (e) {
+        assert(e.includes('Session percent not found'), 'Wrong error message');
+      }
+    });
+
+    // ===== PHASE 2: STATS TESTS =====
+    test('Phase 2: Stats', 'Calculate target percentage (on-track)', () => {
+      const hoursLeft = 1;
+      const actualPct = 50;
+      const stats = computeStats(5, hoursLeft, actualPct, 0.8);
+      assert(stats.targetPct > 0 && stats.targetPct <= 100, 'Target should be valid percentage');
+      assert(stats.status !== undefined, 'Should have status');
+    });
+
+    test('Phase 2: Stats', 'Detect over-usage', () => {
+      const stats = computeStats(5, 1, 85, 0.8);
+      assert(stats.status === 'over', 'Should be marked as over');
+      assert(stats.diff > 0, 'Diff should be positive for over-usage');
+    });
+
+    test('Phase 2: Stats', 'Detect under-usage', () => {
+      const stats = computeStats(5, 1, 20, 0.8);
+      assert(stats.status === 'under', 'Should be marked as under');
+      assert(stats.diff < 0, 'Diff should be negative for under-usage');
+    });
+
+    test('Phase 2: Stats', 'Suggest pacing based on usage', () => {
+      const pacingHigh = suggestPacing(85);
+      const pacingLow = suggestPacing(30);
+      assert(pacingHigh < pacingLow, 'High usage should suggest slower pacing');
+      assert(pacingHigh > 0 && pacingHigh <= 1, 'Pacing should be between 0 and 1');
+    });
+
+    test('Phase 2: Stats', 'Suggest reason for pacing', () => {
+      const reason85 = suggestReason(85);
+      const reason30 = suggestReason(30);
+      assert(reason85.length > 0, 'Should return non-empty reason');
+      assert(reason30.length > 0, 'Should return non-empty reason');
+      assert(reason85 !== reason30, 'Different usage levels should give different reasons');
+    });
+
+    // ===== PHASE 3: RENDERER TESTS =====
+    test('Phase 3: Renderer', 'Setup results container and render session', () => {
+      const resultsDiv = document.createElement('div');
+      resultsDiv.id = 'results';
+      document.body.appendChild(resultsDiv);
+
+      const parsed = {
+        session: { actualPct: 45, hoursLeft: 1.5 },
+        weekly: { actualPct: 78, hoursLeft: 48 }
+      };
+
+      renderResults(parsed);
+      assert(resultsDiv.children.length > 0, 'Should create DOM elements');
+      assert(resultsDiv.innerHTML.length > 0, 'Should have rendered HTML');
+
+      document.body.removeChild(resultsDiv);
+    });
+
+    test('Phase 3: Renderer', 'Render suggestion card', () => {
+      const suggestionDiv = document.createElement('div');
+      suggestionDiv.id = 'suggestion';
+      document.body.appendChild(suggestionDiv);
+
+      const parsed = {
+        session: { actualPct: 75, hoursLeft: 1 },
+        weekly: { actualPct: 65, hoursLeft: 24 }
+      };
+
+      renderSuggestion(parsed);
+      assert(suggestionDiv.innerHTML.length > 0, 'Should render suggestion');
+
+      document.body.removeChild(suggestionDiv);
+    });
+
+    test('Phase 3: Renderer', 'Handle session-only data', () => {
+      const resultsDiv = document.createElement('div');
+      resultsDiv.id = 'results';
+      document.body.appendChild(resultsDiv);
+
+      const parsed = {
+        session: { actualPct: 45, hoursLeft: 1.5 },
+        weekly: null
+      };
+
+      renderResults(parsed);
+      assert(resultsDiv.children.length > 0, 'Should render session data');
+
+      document.body.removeChild(resultsDiv);
+    });
+
+    test('Phase 3: Renderer', 'Handle weekly-only data', () => {
+      const resultsDiv = document.createElement('div');
+      resultsDiv.id = 'results';
+      document.body.appendChild(resultsDiv);
+
+      const parsed = {
+        session: null,
+        weekly: { actualPct: 78, hoursLeft: 48 }
+      };
+
+      renderResults(parsed);
+      assert(resultsDiv.children.length > 0, 'Should render weekly data');
+
+      document.body.removeChild(resultsDiv);
+    });
+
+    // ===== INTEGRATION TESTS =====
+    test('Integration', 'Full pipeline: parse → calculate → render', () => {
+      const text = 'Current Session: 40% used. Resets in 2 hr. Weekly Limits: 70% used. Resets Friday 5:59 AM';
+      const parsed = parseUsageText(text);
+      assert(parsed.session && parsed.weekly, 'Parser should return both session and weekly');
+      const html = renderResults(parsed);
+      assert(html && html.length > 0, 'Renderer should produce output');
+    });
+
+    test('Integration', 'Handle edge case: 0% usage', () => {
+      const text = 'Current Session: 0% used. Resets in 5 hr. Weekly Limits: 0% used. Resets Mon 9:00 AM';
+      const parsed = parseUsageText(text);
+      assert(parsed.session && parsed.session.actualPct === 0, 'Should parse 0%');
+      const html = renderResults(parsed);
+      assert(html && html.length > 0, 'Should render 0% usage');
+    });
+
+    test('Integration', 'Handle edge case: 100% usage', () => {
+      const text = 'Current Session: 100% used. Resets in 30 min. Weekly Limits: 100% used. Resets Sun 12:00 AM';
+      const parsed = parseUsageText(text);
+      assert(parsed.session && parsed.session.actualPct === 100, 'Should parse 100%');
+      const html = renderResults(parsed);
+      assert(html && html.length > 0, 'Should render 100% usage');
+    });
+
+    // Run all tests
+    renderTests();
+
+    // Print summary
+    console.log(`\n✅ TESTS COMPLETE: ${testResults.passed} passed, ${testResults.failed} failed\n`);
+    if (testResults.failed === 0) {
+      console.log('🎉 All tests passed! Extension is ready to load.');
+    } else {
+      console.log('⚠️ Some tests failed. Review the failures above before loading the extension.');
+    }
+  </script>
+</body>
+</html>

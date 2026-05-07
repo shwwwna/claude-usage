@@ -2,6 +2,15 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.alarms.create('refresh', { periodInMinutes: 5 });
 });
 
+chrome.action.onClicked.addListener(() => {
+  chrome.windows.create({
+    url: 'window.html',
+    type: 'popup',
+    width: 900,
+    height: 700
+  });
+});
+
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name !== 'refresh') return;
   const tabs = await chrome.tabs.query({ url: 'https://claude.ai/settings/usage' });

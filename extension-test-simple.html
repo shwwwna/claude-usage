@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Chrome Extension Pre-Load Test</title>
+  <style>
+    body {
+      font-family: 'SF Mono', Consolas, Monaco, monospace;
+      background: #0f0f11;
+      color: #e8e8ed;
+      padding: 2rem;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    h1 { color: #6366f1; margin-bottom: 2rem; }
+    .test-group {
+      background: #1c1c1f;
+      border: 1px solid #2a2a2e;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .test-group h2 {
+      color: #a5b4fc;
+      margin-top: 0;
+      font-size: 1.1rem;
+      border-bottom: 1px solid #2a2a2e;
+      padding-bottom: 0.75rem;
+    }
+    .test-case {
+      background: #26262a;
+      border-left: 3px solid #6366f1;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border-radius: 4px;
+    }
+    .test-case.pass {
+      border-left-color: #22c55e;
+    }
+    .test-case.fail {
+      border-left-color: #ef4444;
+    }
+    .test-title {
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+      font-size: 0.95rem;
+    }
+    .test-result {
+      padding: 0.5rem;
+      border-radius: 3px;
+      font-size: 0.9rem;
+      white-space: pre-wrap;
+    }
+    .status {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 3px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+    .status.pass { background: #052e16; color: #86efac; }
+    .status.fail { background: #450a0a; color: #f87171; }
+    .summary {
+      background: #26262a;
+      border: 1px solid #3a3a3f;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-top: 2rem;
+    }
+    .stat { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }
+    .stat-label { color: #aaa; }
+    .stat-value { font-weight: bold; }
+    .warning {
+      background: rgba(217, 119, 6, 0.1);
+      border: 1px solid rgba(217, 119, 6, 0.3);
+      border-radius: 4px;
+      padding: 1rem;
+      margin: 1rem 0;
+      color: #fbbf24;
+    }
+    .success {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      border-radius: 4px;
+      padding: 1rem;
+      margin: 1rem 0;
+      color: #86efac;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 Chrome Extension Pre-Load Verification</h1>
+  <div id="tests"></div>
+
+  <script src="extension/src/parser.js"></script>
+  <script src="extension/src/stats.js"></script>
+  <script src="extension/src/renderer.js"></script>
+  <script src="extension/window.js"></script>
+
+  <script>
+    const results = { passed: 0, failed: 0, tests: [] };
+
+    function assert(condition, message) {
+      if (!condition) throw new Error(message);
+    }
+
+    function test(groupName, testName, fn) {
+      try {
+        fn();
+        results.passed++;
+        results.tests.push({ groupName, testName, status: 'pass' });
+        return true;
+      } catch (e) {
+        results.failed++;
+        results.tests.push({ groupName, testName, status: 'fail', error: e.message });
+        return false;
+      }
+    }
+
+    // ===== PARSER TESTS =====
+    test('Parser', 'Parse basic session and weekly', () => {
+      const text = `Current Session
+45% used
+Resets in 1 hr 30 min
+
+Weekly Limits
+78% used
+Resets Friday 5:59 AM`;
+      const result = parseUsageText(text);
+      assert(result.session && result.session.actualPct === 45, 'Session percent should be 45');
+      assert(result.weekly && result.weekly.actualPct === 78, 'Weekly percent should be 78');
+    });
+
+    test('Parser', 'Parse session with minutes only', () => {
+      const text = `Current Session
+20% used
+Resets in 45 min
+
+Weekly Limits
+50% used
+Resets Friday 5:59 AM`;
+      const result = parseUsageText(text);
+      assert(result.session && Math.abs(result.session.hoursLeft - 0.75) < 0.01, 'Minutes should convert to hours (0.75)');
+    });
+
+    test('Parser', 'Reject missing data', () => {
+      try {
+        parseUsageText('random text');
+        assert(false, 'Should throw');
+      } catch (e) {
+        assert(e.includes('not found') || typeof e === 'string', 'Should throw parse error');
+      }
+    });
+
+    test('Parser', 'Handle various time formats', () => {
+      const formats = [
+        `Current Session
+10% used
+Resets in 2 hr
+
+Weekly Limits
+30% used
+Resets Monday 9:00 AM`,
+        `Current Session
+15% used
+Resets in 3 hours
+
+Weekly Limits
+40% used
+Resets Tuesday 8:30 PM`,
+        `Current Session
+25% used
+Resets in 30 min
+
+Weekly Limits
+60% used
+Resets Saturday 11:59 PM`,
+      ];
+      formats.forEach(text => {
+        const result = parseUsageText(text);
+        assert(result.session && result.weekly, 'Should parse all formats');
+      });
+    });
+
+    // ===== STATS TESTS =====
+    test('Stats', 'Calculate valid stats', () => {
+      const stats = computeStats(5, 1, 50, 0.8);
+      assert(stats.targetPct !== undefined, 'Should have targetPct');
+      assert(stats.diff !== undefined, 'Should have diff');
+      assert(['on', 'over', 'under'].includes(stats.status), 'Should have valid status');
+    });
+
+    test('Stats', 'Detect over-usage status', () => {
+      // With exponent 0.8, elapsed=4.5h of 5h means target ≈ (4.5/5)^0.8 * 100 ≈ 91.9%
+      // Threshold for 'over' is diff >= 5pp, so need actual >= target + 5
+      // 91.9 + 5 = 96.9, so 97% actual triggers 'over'
+      const stats = computeStats(5, 0.5, 97, 0.8);
+      assert(stats.status === 'over', 'Usage >5pp above target should be over');
+    });
+
+    test('Stats', 'Detect under-usage status', () => {
+      const stats = computeStats(5, 1, 20, 0.8);
+      assert(stats.status === 'under', 'Low usage should be under');
+    });
+
+    test('Stats', 'Suggest pacing values between 0 and 1', () => {
+      [30, 50, 70, 85].forEach(pct => {
+        const pacing = suggestPacing(pct);
+        assert(pacing >= 0 && pacing <= 1, `Pacing for ${pct}% should be 0-1, got ${pacing}`);
+      });
+    });
+
+    test('Stats', 'Suggest descriptive reasons', () => {
+      [30, 50, 70, 85].forEach(pct => {
+        const reason = suggestReason(pct);
+        assert(reason && reason.length > 10, `Reason should be non-empty string`);
+      });
+    });
+
+    // ===== RENDERER BASIC TESTS =====
+    test('Renderer', 'Create results container without crashing', () => {
+      const resultsDiv = document.createElement('div');
+      resultsDiv.id = 'results';
+      document.body.appendChild(resultsDiv);
+
+      const parsed = {
+        session: { actualPct: 45, hoursLeft: 1.5 },
+        weekly: { actualPct: 78, hoursLeft: 48 }
+      };
+
+      try {
+        renderResults(parsed);
+        assert(resultsDiv.children.length > 0, 'Should create DOM elements');
+        document.body.removeChild(resultsDiv);
+      } catch (e) {
+        document.body.removeChild(resultsDiv);
+        throw e;
+      }
+    });
+
+    test('Renderer', 'Create suggestion card without crashing', () => {
+      const suggestionDiv = document.createElement('div');
+      suggestionDiv.id = 'suggestion';
+      document.body.appendChild(suggestionDiv);
+
+      const parsed = {
+        session: { actualPct: 75, hoursLeft: 1 },
+        weekly: { actualPct: 65, hoursLeft: 24 }
+      };
+
+      try {
+        renderSuggestion(parsed);
+        assert(suggestionDiv.innerHTML.length > 0, 'Should render suggestion');
+        document.body.removeChild(suggestionDiv);
+      } catch (e) {
+        document.body.removeChild(suggestionDiv);
+        throw e;
+      }
+    });
+
+    test('Window', 'exponentToLabel function exists', () => {
+      assert(typeof exponentToLabel === 'function', 'exponentToLabel should be a function');
+      const labels = [0, 0.2, 0.5, 0.8, 1].map(e => exponentToLabel(e));
+      assert(labels.every(l => typeof l === 'string'), 'All labels should be strings');
+    });
+
+    test('Window', 'run function exists', () => {
+      assert(typeof run === 'function', 'run should be a function');
+      run(); // Should not crash
+    });
+
+    // ===== INTEGRATION =====
+    test('Integration', 'Full parsing pipeline', () => {
+      const text = `Current Session
+40% used
+Resets in 2 hr
+
+Weekly Limits
+70% used
+Resets Friday 5:59 AM`;
+      const parsed = parseUsageText(text);
+      assert(parsed.session && parsed.weekly, 'Parser output valid');
+
+      const sessionStats = computeStats(5, parsed.session.hoursLeft, parsed.session.actualPct, 0.8);
+      assert(sessionStats.status, 'Stats computed');
+    });
+
+    function renderTests() {
+      const testsEl = document.getElementById('tests');
+      const grouped = {};
+
+      results.tests.forEach(t => {
+        if (!grouped[t.groupName]) grouped[t.groupName] = [];
+        grouped[t.groupName].push(t);
+      });
+
+      Object.entries(grouped).forEach(([groupName, tests]) => {
+        const groupEl = document.createElement('div');
+        groupEl.className = 'test-group';
+
+        const titleEl = document.createElement('h2');
+        titleEl.textContent = groupName;
+        groupEl.appendChild(titleEl);
+
+        tests.forEach(t => {
+          const testEl = document.createElement('div');
+          testEl.className = `test-case ${t.status}`;
+
+          const statusEl = document.createElement('div');
+          statusEl.className = `status ${t.status}`;
+          statusEl.textContent = t.status.toUpperCase();
+          testEl.appendChild(statusEl);
+
+          const titleEl = document.createElement('div');
+          titleEl.className = 'test-title';
+          titleEl.textContent = t.testName;
+          testEl.appendChild(titleEl);
+
+          if (t.error) {
+            const resultEl = document.createElement('div');
+            resultEl.className = 'test-result';
+            resultEl.style.color = '#f87171';
+            resultEl.textContent = t.error;
+            testEl.appendChild(resultEl);
+          }
+
+          groupEl.appendChild(testEl);
+        });
+
+        testsEl.appendChild(groupEl);
+      });
+
+      const summaryEl = document.createElement('div');
+      summaryEl.className = 'summary';
+
+      const passRate = results.passed + results.failed > 0
+        ? ((results.passed / (results.passed + results.failed)) * 100).toFixed(0)
+        : 0;
+
+      if (results.failed === 0 && results.passed > 0) {
+        summaryEl.innerHTML = `
+          <div class="success">✅ All tests passed! Extension is ready to load into Chrome.</div>
+          <h3>Test Summary</h3>
+          <div class="stat">
+            <span class="stat-label">Total Tests:</span>
+            <span class="stat-value">${results.passed + results.failed}</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Passed:</span>
+            <span class="stat-value" style="color: #86efac;">${results.passed}</span>
+          </div>
+        `;
+      } else {
+        summaryEl.innerHTML = `
+          <div class="warning">⚠️ ${results.failed} test(s) failed. Fix these before loading the extension.</div>
+          <h3>Test Summary</h3>
+          <div class="stat">
+            <span class="stat-label">Total Tests:</span>
+            <span class="stat-value">${results.passed + results.failed}</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Passed:</span>
+            <span class="stat-value" style="color: #86efac;">${results.passed}</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Failed:</span>
+            <span class="stat-value" style="color: #f87171;">${results.failed}</span>
+          </div>
+        `;
+      }
+
+      testsEl.appendChild(summaryEl);
+    }
+
+    renderTests();
+    console.log(`\nTest Results: ${results.passed} passed, ${results.failed} failed\n`);
+  </script>
+</body>
+</html>
