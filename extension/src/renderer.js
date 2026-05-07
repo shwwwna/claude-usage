@@ -241,7 +241,7 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent, ses
     }
     const labelEl = document.getElementById(label === 'Session' ? 'session-exponent-label' : 'weekly-exponent-label');
     if (labelEl) labelEl.textContent = exponentToLabel(v);
-    run({ skipAutoPace: true });
+    if (lastParsed) renderResults(lastParsed);
   });
   pacingControl.appendChild(pacingSlider);
 
@@ -575,6 +575,33 @@ function build5hrWindows(hoursLeft, resetMs, sessionStartMs) {
   const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const sleep = getSleepHours();
 
+  function isHourInSleep(hour, sleepStart, sleepEnd) {
+    if (sleepStart === sleepEnd) return false;
+    if (sleepStart < sleepEnd) {
+      return hour >= sleepStart && hour < sleepEnd;
+    } else {
+      return hour >= sleepStart || hour < sleepEnd;
+    }
+  }
+
+  function getNextSleepOnset(afterDate, sleepStart, sleepEnd) {
+    const date = new Date(afterDate);
+    date.setHours(sleepStart, 0, 0, 0);
+    if (date <= afterDate) {
+      date.setDate(date.getDate() + 1);
+    }
+    return date;
+  }
+
+  function getNextWakeTime(afterDate, sleepStart, sleepEnd) {
+    const date = new Date(afterDate);
+    date.setHours(sleepEnd, 0, 0, 0);
+    if (date <= afterDate) {
+      date.setDate(date.getDate() + 1);
+    }
+    return date;
+  }
+
   // Build list of windows from session start to reset
   const windows = [];
   const windowMs = SESSION_WINDOW_HOURS * 3600 * 1000;
@@ -585,37 +612,55 @@ function build5hrWindows(hoursLeft, resetMs, sessionStartMs) {
     const windowEnd = new Date(Math.min(cursor + windowMs, resetMs));
 
     if (sleep && sleep.start !== sleep.end) {
-      // Find when sleep starts after cursor
-      const sleepOnset = new Date(windowStart);
-      sleepOnset.setHours(sleep.start, 0, 0, 0);
-      if (sleepOnset <= windowStart) sleepOnset.setDate(sleepOnset.getDate() + 1);
+      const startHour = windowStart.getHours();
+      const endHour = windowEnd.getHours();
+      const isSleepingAtStart = isHourInSleep(startHour, sleep.start, sleep.end);
+      const isSleepingAtEnd = isHourInSleep(endHour, sleep.start, sleep.end);
 
-      // Check if sleep period falls within this window
-      if (sleepOnset < windowEnd) {
-        // This window crosses into sleep — split into awake part then sleep part
-
-        // Awake portion before sleep
-        if (sleepOnset > windowStart) {
-          windows.push({ start: new Date(windowStart), end: new Date(sleepOnset), asleep: false });
+      // Check if window overlaps with sleep at all
+      let hasOverlapWithSleep = false;
+      for (let h = startHour; h < 24; h++) {
+        if (isHourInSleep(h, sleep.start, sleep.end)) {
+          hasOverlapWithSleep = true;
+          break;
         }
-
-        // Sleep portion from sleep onset to wake time
-        const wakeTime = new Date(sleepOnset);
-        wakeTime.setHours(sleep.end, 0, 0, 0);
-        if (wakeTime <= sleepOnset) wakeTime.setDate(wakeTime.getDate() + 1);
-
-        // Sleep ends at wake time but window continues to windowEnd
-        const sleepEnd = new Date(Math.min(wakeTime.getTime(), windowEnd));
-        windows.push({ start: new Date(sleepOnset), end: sleepEnd, asleep: true });
-
-        // Awake portion after sleep (if window extends past wake time)
-        if (wakeTime < windowEnd) {
-          windows.push({ start: new Date(wakeTime), end: new Date(windowEnd), asleep: false });
+      }
+      if (!hasOverlapWithSleep && endHour > startHour) {
+        for (let h = 0; h < endHour; h++) {
+          if (isHourInSleep(h, sleep.start, sleep.end)) {
+            hasOverlapWithSleep = true;
+            break;
+          }
         }
+      }
 
-        // Move to end of this window
-        cursor = windowEnd.getTime();
-        continue;
+      if (hasOverlapWithSleep) {
+        if (isSleepingAtStart) {
+          const wakeTime = getNextWakeTime(windowStart, sleep.start, sleep.end);
+          if (wakeTime < windowEnd) {
+            windows.push({ start: new Date(windowStart), end: new Date(wakeTime), asleep: true });
+            windows.push({ start: new Date(wakeTime), end: new Date(windowEnd), asleep: false });
+            cursor = windowEnd.getTime();
+            continue;
+          } else {
+            windows.push({ start: new Date(windowStart), end: new Date(windowEnd), asleep: true });
+            cursor = windowEnd.getTime();
+            continue;
+          }
+        } else {
+          const sleepOnset = getNextSleepOnset(windowStart, sleep.start, sleep.end);
+          if (sleepOnset < windowEnd) {
+            windows.push({ start: new Date(windowStart), end: new Date(sleepOnset), asleep: false });
+            const wakeTime = getNextWakeTime(sleepOnset, sleep.start, sleep.end);
+            const sleepEnd = new Date(Math.min(wakeTime.getTime(), windowEnd.getTime()));
+            windows.push({ start: new Date(sleepOnset), end: sleepEnd, asleep: true });
+            if (wakeTime < windowEnd) {
+              windows.push({ start: new Date(wakeTime), end: new Date(windowEnd), asleep: false });
+            }
+            cursor = windowEnd.getTime();
+            continue;
+          }
+        }
       }
     }
 
