@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Claude Usage Tracker",
+  "version": "1.0.0",
+  "description": "Track Claude session and weekly usage without copy-pasting",
+  "permissions": ["storage", "alarms", "tabs", "scripting"],
+  "host_permissions": ["https://claude.ai/*"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://claude.ai/settings/usage"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
+}

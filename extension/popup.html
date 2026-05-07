@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Claude Usage Tracker</title>
+    <script src="tailwindcss.min.js"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              base: '#0f0f11',
+              surface: '#1c1c1f',
+              surface2: '#26262a',
+              border: '#2a2a2e',
+              border2: '#3a3a3f',
+              text: '#e8e8ed',
+              muted1: '#ccc',
+              muted2: '#aaa',
+              muted3: '#888',
+              muted4: '#666',
+              muted5: '#555',
+              'red-over': '#ef4444',
+              'red-light': '#f87171',
+              'red-pale': '#fca5a5',
+              'red-dark': '#450a0a',
+              'red-alarm': '#e14b4b',
+              'green-under': '#22c55e',
+              'green-light': '#86efac',
+              'green-dark': '#052e16',
+              'green-mid': '#2d5a2d',
+              'indigo-accent': '#6366f1',
+              'indigo-light': '#a5b4fc',
+              'indigo-dark': '#1e1b4b',
+              'indigo-green': '#1e3a1f',
+              'orange-constrained': '#fdba74',
+              'orange-dark': '#451a03',
+              'legend-bright': '#e0e7ff',
+              'legend-mid': '#c7d2fe',
+              'legend-dim': '#8891c9',
+              'body-text': '#d8d8e8',
+            },
+            fontSize: { base: '24px' },
+            fontFamily: {
+              mono: ['SF Mono', 'Consolas', 'Monaco', 'monospace'],
+            },
+            animation: {
+              'alarm-pulse': 'alarm-pulse 1.2s ease-in-out infinite',
+            },
+            keyframes: {
+              'alarm-pulse': {
+                '0%, 100%': { backgroundColor: 'rgba(0,0,0,0.75)' },
+                '50%': { backgroundColor: 'rgba(80,0,0,0.85)' },
+              },
+            },
+          },
+        },
+      }
+    </script>
+    <style type="text/tailwindcss">
+      @layer base {
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { font-size: 24px; }
+        body {
+          @apply bg-base text-text flex flex-col items-center py-4 px-4 gap-4;
+          min-height: 100vh;
+          width: 420px;
+        }
+        h1 { @apply text-white font-semibold; font-size: 1rem; }
+        button {
+          @apply px-3 py-1 bg-surface2 text-muted1 rounded cursor-pointer;
+          font-size: 0.75rem;
+          border: 1px solid #3a3a3f;
+        }
+        body.session-hidden .card[data-type="session"] { display: none; }
+        body.session-hidden .pacing-row[data-type="session"] { display: none; }
+        body.session-hidden .suggestion-item[data-type="session"] { display: none; }
+      }
+      @layer components {
+        .card {
+          @apply bg-surface border border-border rounded-xl flex flex-col gap-3 p-4 w-full;
+        }
+        .card-title {
+          @apply text-muted3 uppercase tracking-widest;
+          font-size: 0.7rem;
+        }
+        .pacing-card {
+          @apply bg-surface border border-border rounded-xl flex flex-col gap-2 p-4;
+        }
+        .stat-row { @apply flex justify-between items-baseline; }
+        .compact-meta-row { @apply flex gap-6 flex-wrap; }
+        .compact-meta-cell { @apply flex items-baseline gap-1; }
+        .stat-label { @apply text-muted2; font-size: 0.8rem; }
+        .stat-value { @apply font-semibold tabular-nums; font-size: 1rem; }
+        .bar-legend-left { @apply tabular-nums text-legend-dim text-center; font-size: 0.5rem; }
+        .stat-explainer { @apply text-muted4; font-size: 0.65rem; margin-top: -0.2rem; }
+        .fraction-value { font-size: 0.85rem; }
+        .frac-actual { @apply text-text; }
+        .frac-sep { @apply text-muted5; font-size: 0.75rem; margin: 0 0.1rem; }
+        .frac-target { @apply text-muted3; }
+        .badge { @apply font-bold rounded; font-size: 0.7rem; padding: 0.15rem 0.5rem; }
+        .badge-over { @apply bg-red-dark text-red-pale; }
+        .badge-under { @apply bg-green-dark text-green-light; }
+        .badge-on { @apply bg-indigo-dark text-indigo-light; }
+        .badge-constrained { @apply bg-orange-dark text-orange-constrained; }
+        .diff-value { @apply tabular-nums; }
+        .diff-over { @apply text-red-pale; }
+        .diff-under { @apply text-green-light; }
+        .diff-on { @apply text-indigo-light; }
+        .bar-track {
+          @apply relative w-full bg-border rounded;
+          height: 12px;
+        }
+        .bar-track.unified { @apply overflow-visible; }
+        .bar-target-fill {
+          @apply absolute top-0 left-0 h-full rounded;
+          background: hsla(0, 0%, 100%, 0.4);
+          transition: width 0.4s ease;
+        }
+        .bar-actual-fill {
+          @apply absolute top-0 left-0 h-full rounded mix-blend-screen;
+          transition: width 0.4s ease;
+        }
+        .bar-actual-fill.status-under,
+        .bar-actual-fill.status-on { background: rgba(34, 197, 94, 0.7); }
+        .bar-actual-fill.status-over { background: rgba(239, 68, 68, 0.75); }
+        .bar-target-marker {
+          @apply absolute top-0 w-px;
+          height: 100%;
+          background: #a5b4fc;
+          box-shadow: 0 0 4px #a5b4fc;
+        }
+        .bar-endpoint-dot {
+          @apply absolute rounded-full;
+          width: 14px; height: 14px;
+          top: 50%; transform: translateY(-50%);
+        }
+        .bar-endpoint-dot.status-under,
+        .bar-endpoint-dot.status-on { @apply bg-green-under; }
+        .bar-endpoint-dot.status-over { @apply bg-red-over; }
+        .bar-tick {
+          @apply absolute top-0 h-full;
+          width: 1px;
+          background: rgba(255,255,255,0.35);
+        }
+        .card-title-row { @apply flex justify-between items-center; }
+        .card-toggle {
+          @apply w-full py-0 bg-transparent border-0 text-left cursor-pointer flex justify-between items-center px-0;
+        }
+        .card-chevron {
+          @apply text-muted3 transition-transform;
+          font-size: 1rem;
+        }
+        .card-chevron.open { transform: rotate(90deg); }
+        .bar-legend { @apply grid w-full; grid-template-columns: repeat(10, 1fr); }
+        .bar-legend-item { @apply flex flex-col items-center; }
+        .bar-legend-item.legend-past { @apply line-through text-muted5; }
+        .bar-legend-item.bar-legend-reset {
+          grid-column: 10;
+          grid-row: 2;
+          @apply flex flex-col items-center border-t border-muted5 pt-1;
+          margin-top: 0.15rem;
+        }
+        .bar-legend-pct { @apply tabular-nums text-legend-bright; font-size: 0.6rem; }
+        .bar-legend-date { @apply tabular-nums text-legend-mid; font-size: 0.55rem; }
+        .bar-legend-left { @apply tabular-nums text-legend-dim text-center; font-size: 0.5rem; }
+        .bar-legend-reset .bar-legend-pct { @apply text-muted3; }
+        .sleep-row { @apply flex items-center gap-2 text-muted3; font-size: 0.75rem; }
+        .sleep-label { @apply text-muted4 whitespace-nowrap; }
+        .sleep-select {
+          @apply bg-surface border border-muted5 rounded text-muted2;
+          font-size: 0.75rem; padding: 0.1rem 0.3rem;
+        }
+        .sleep-select:focus { @apply outline-none border-muted4; }
+        .sleep-sep { @apply text-muted5; }
+        .windows-list { @apply flex flex-col gap-1; }
+        .windows-header { @apply flex justify-between items-baseline; }
+        .windows-total { @apply text-muted5; font-size: 0.65rem; }
+        .windows-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 0.75rem;
+          margin-top: 0.5rem;
+        }
+        .windows-col { @apply flex flex-col; gap: 0.1rem; }
+        .windows-day { @apply text-muted4 uppercase; font-size: 0.6rem; margin-bottom: 0.2rem; }
+        .windows-item { @apply flex gap-2 text-muted1; font-size: 0.72rem; }
+        .windows-item-sleep { @apply text-muted3; opacity: 0.55; }
+        .windows-num { @apply tabular-nums text-right; min-width: 1.2rem; flex-shrink: 0; }
+        .windows-range { @apply text-body-text font-medium; }
+        .windows-range .windows-duration { @apply text-muted2; margin-left: 0.3em; }
+        .suggestion-items { @apply flex flex-col gap-2; }
+        .suggestion-item {
+          @apply flex justify-between items-center p-2 rounded;
+          background: rgba(134, 239, 172, 0.05);
+        }
+        .suggestion-item.suggestion-update {
+          background: rgba(134, 239, 172, 0.1);
+          border: 1px solid rgba(134, 239, 172, 0.2);
+        }
+        .suggestion-label { @apply text-muted2; font-size: 0.8rem; }
+        .suggestion-value { @apply text-green-light uppercase; font-size: 0.85rem; }
+        .suggestion-btn {
+          @apply rounded cursor-pointer;
+          padding: 0.3rem 0.7rem;
+          background: #2d5a2d;
+          color: #86efac;
+          border: 1px solid #3a6a3a;
+          font-size: 0.75rem;
+        }
+        .history-empty { @apply text-muted3 text-center; font-size: 0.85rem; }
+        .history-title { @apply text-indigo-light; font-size: 0.95rem; }
+        .history-analysis { @apply text-muted3; font-size: 0.8rem; }
+        .status-bar { @apply flex justify-between items-center text-muted3; font-size: 0.75rem; gap: 1rem; }
+        .status-time { @apply text-muted4; }
+        .error-message { @apply text-red-light; font-size: 0.8rem; }
+        .open-page-prompt { @apply text-muted2; font-size: 0.85rem; }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Claude Usage</h1>
+
+    <div id="status-bar" class="status-bar" style="display: none;">
+      <span id="last-updated">Last updated: never</span>
+      <button id="btn-refresh">Refresh</button>
+    </div>
+
+    <div id="error" class="error-message" style="display: none;"></div>
+
+    <div id="open-prompt" class="open-page-prompt" style="display: none;">
+      <p>Open <a href="https://claude.ai/settings/usage" target="_blank" style="color: #6366f1; text-decoration: none;">claude.ai/settings/usage</a> to use this extension.</p>
+    </div>
+
+    <div class="flex flex-col gap-4 w-full" id="results"></div>
+
+    <div id="suggestion" class="w-full card" style="display: none;"></div>
+
+    <script src="src/parser.js"></script>
+    <script src="src/stats.js"></script>
+    <script src="storage-adapter.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>
