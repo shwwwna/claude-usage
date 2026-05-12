@@ -6,17 +6,30 @@ function loadHistory() { return []; }
 function saveHistory() {}
 
 document.addEventListener('DOMContentLoaded', async () => {
+  await loadAlarmState();
+  updateAlarmButtonLabel();
+
   const cachedData = await getCachedData();
   if (cachedData) {
     processText(cachedData.text);
     showLastUpdated(cachedData.timestamp);
   }
 
-  const tabs = await chrome.tabs.query({ url: 'https://claude.ai/settings/usage' });
-  const usageTab = tabs.length > 0 ? tabs[0] : null;
+  let tabs = await chrome.tabs.query({ url: 'https://claude.ai/settings/usage' });
+  let usageTab = tabs.length > 0 ? tabs[0] : null;
+
+  if (!usageTab) {
+    const newTab = await chrome.tabs.create({ url: 'https://claude.ai/settings/usage' });
+    usageTab = newTab;
+  }
 
   if (usageTab) {
     document.getElementById('status-bar').style.display = 'flex';
+    document.getElementById('btn-alarm-toggle').addEventListener('click', () => {
+      const newState = !isAlarmEnabled();
+      setAlarmEnabled(newState);
+      updateAlarmButtonLabel();
+    });
     document.getElementById('btn-refresh').addEventListener('click', () => {
       chrome.scripting.executeScript({ target: { tabId: usageTab.id }, files: ['content.js'] });
     });
@@ -59,6 +72,9 @@ function processText(text) {
     const parsed = parseUsageText(text);
     renderResults(parsed);
     renderSuggestion(parsed);
+    if (isAlarmEnabled() && parsed.session) {
+      scheduleSessionAlarm(Date.now() + parsed.session.hoursLeft * 3600 * 1000);
+    }
   } catch (err) {
     showError(err);
   }
@@ -120,4 +136,11 @@ function importJSON(file) {
 
 function exportJSON() {
   // Placeholder
+}
+
+function updateAlarmButtonLabel() {
+  const btn = document.getElementById('btn-alarm-toggle');
+  if (btn) {
+    btn.textContent = isAlarmEnabled() ? 'Alarm: on' : 'Alarm: off';
+  }
 }

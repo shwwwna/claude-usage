@@ -11,13 +11,14 @@
 
     <div id="status-bar" class="status-bar" style="display: none;">
       <span id="last-updated">Last updated: never</span>
+      <button id="btn-alarm-toggle">Alarm: off</button>
       <button id="btn-refresh">Refresh</button>
     </div>
 
     <div id="error" class="error-message" style="display: none;"></div>
 
     <div id="open-prompt" class="open-page-prompt" style="display: none;">
-      <p>Open <a href="https://claude.ai/settings/usage" target="_blank" style="color: #6366f1; text-decoration: none;">claude.ai/settings/usage</a> to use this extension.</p>
+      <p>Open <a href="https://claude.ai/settings/usage" target="_blank" style="color: #d77556; text-decoration: none;">claude.ai/settings/usage</a> to use this extension.</p>
     </div>
 
     <div class="flex flex-col gap-4 w-full max-w-[900px] mx-auto px-4" id="results"></div>
@@ -27,6 +28,7 @@
     <script src="src/parser.js"></script>
     <script src="src/stats.js"></script>
     <script src="src/renderer.js"></script>
+    <script src="src/alarm.js"></script>
     <script src="storage-adapter.js"></script>
     <script src="window.js"></script>
   </body>
