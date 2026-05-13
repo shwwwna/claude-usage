@@ -1,14 +1,20 @@
 chrome.runtime.onInstalled.addListener(() => {
   chrome.alarms.create('refresh', { periodInMinutes: 5 });
+  chrome.action.setBadgeBackgroundColor({ color: '#d77556' });
 });
 
-chrome.action.onClicked.addListener(() => {
+chrome.action.onClicked.addListener(async () => {
   chrome.windows.create({
     url: 'window.html',
     type: 'popup',
     width: 900,
     height: 700
   });
+
+  const tabs = await chrome.tabs.query({ url: 'https://claude.ai/settings/usage' });
+  if (tabs.length === 0) {
+    chrome.tabs.create({ url: 'https://claude.ai/settings/usage' });
+  }
 });
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
@@ -23,10 +29,10 @@ chrome.runtime.onMessage.addListener(({ type, text }, sender, sendResponse) => {
   if (type !== 'USAGE_TEXT') return;
   chrome.storage.local.set({ cachedText: text, cachedAt: Date.now() });
 
-  const match = text.match(/(\d+)%\s+used/i);
-  if (match) {
-    const pct = match[1];
+  const matches = text.match(/(\d+)%\s+used/gi);
+  if (matches && matches.length >= 2) {
+    const weeklyMatch = matches[1].match(/(\d+)/);
+    const pct = weeklyMatch[1];
     chrome.action.setBadgeText({ text: pct + '%' });
-    chrome.action.setBadgeBackgroundColor({ color: '#4a9eff' });
   }
 });

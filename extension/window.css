@@ -565,7 +565,7 @@ body.session-hidden .suggestion-item[data-type="session"] { display: none; }
   background-color: #1c1c1f;
   border-radius: 0.5rem;
   padding: 0.75rem;
-  border-left: 3px solid #6366f1;
+  border-left: 3px solid #d77556;
 }
 
 .session-header {
@@ -696,14 +696,14 @@ body.session-hidden .suggestion-item[data-type="session"] { display: none; }
 /* Range input sliders */
 input[type=range] {
   flex: 1;
-  accent-color: #6366f1;
+  accent-color: #9ba9ec;
   cursor: pointer;
 }
 
 /* Pacing cards bullets */
 .grid.grid-cols-4 > div ul li::before {
   content: '→ ';
-  color: #6366f1;
+  color: #d77556;
   font-weight: 600;
   margin-right: 0.3rem;
 }

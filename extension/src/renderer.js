@@ -232,6 +232,34 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent, ses
   pacingSlider.step = '0.01';
   pacingSlider.value = exponent;
   pacingSlider.className = 'flex-1';
+  function computeEarlierLabel(exp) {
+    const e = Math.max(exp, 0.05);
+    const now = Date.now();
+    const remainingMs = hoursLeft * 3600 * 1000;
+    const totalMs = totalHours * 3600 * 1000;
+    const elapsedMs = (totalHours - hoursLeft) * 3600 * 1000;
+    const windowStartMs = now - elapsedMs;
+    const resetMs = now + remainingMs;
+    const curveNow = Math.pow(actualPct / 100, 1 / e);
+    function hitMs(m) {
+      const isPast = m <= actualPct;
+      return isPast
+        ? windowStartMs + Math.pow(m / 100, 1 / e) * totalMs
+        : now + ((Math.pow(m / 100, 1 / e) - curveNow) / (1 - curveNow)) * remainingMs;
+    }
+    const hit100Ms = actualPct >= 100
+      ? hitMs(100)
+      : hitMs(90) + (hitMs(90) - hitMs(80));
+    const diffMs = resetMs - hit100Ms;
+    const totalMin = Math.max(0, Math.round(diffMs / 60000));
+    const d = Math.floor(totalMin / 1440);
+    const h = Math.floor((totalMin % 1440) / 60);
+    const m = totalMin % 60;
+    if (d > 0) return d + 'd ' + h + 'h earlier than reset';
+    if (h > 0) return h + 'h ' + m + 'm earlier than reset';
+    return m + 'm earlier than reset';
+  }
+
   pacingSlider.addEventListener('input', function() {
     const v = parseFloat(this.value);
     if (label === 'Session') {
@@ -240,7 +268,7 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent, ses
       weeklyExponent = v;
     }
     const labelEl = document.getElementById(label === 'Session' ? 'session-exponent-label' : 'weekly-exponent-label');
-    if (labelEl) labelEl.textContent = exponentToLabel(v);
+    if (labelEl) labelEl.textContent = computeEarlierLabel(v);
     if (lastParsed) renderResults(lastParsed);
   });
   pacingControl.appendChild(pacingSlider);
@@ -249,7 +277,7 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent, ses
   pacingValueLabel.id = label === 'Session' ? 'session-exponent-label' : 'weekly-exponent-label';
   pacingValueLabel.style.minWidth = '8rem';
   pacingValueLabel.style.color = '#a5b4fc';
-  pacingValueLabel.textContent = exponentToLabel(exponent);
+  pacingValueLabel.textContent = computeEarlierLabel(exponent);
   pacingControl.appendChild(pacingValueLabel);
 
   card.appendChild(pacingControl);
@@ -847,10 +875,10 @@ function renderSuggestion(parsed) {
   legendGrid.style.marginTop = '0.5rem';
 
   [
-    { name: 'Aggressive', sub: 'Use most of your quota early', bullets: ['Heavy usage planned for today/early in the week', 'Need fast iteration on urgent work', "Know you'll have lighter usage later"] },
-    { name: 'Front-loaded', sub: 'Slightly skew toward early usage', bullets: ['Plan to work more early, taper off later', 'Natural daily/weekly rhythm with productivity peaks', 'Most common for balanced workflows (default)'] },
-    { name: 'Slight Push', sub: 'Nearly even, slight preference for later', bullets: ['Want flexibility and steady usage throughout', 'No strong pattern of high or low periods', 'Prefer not to rush early on'] },
     { name: 'Conservative', sub: 'Spread usage evenly across the period', bullets: ['Uncertain about upcoming workload', 'Want maximum flexibility in usage timing', 'Prefer to save quota for later just in case'] },
+    { name: 'Slight Push', sub: 'Nearly even, slight preference for later', bullets: ['Want flexibility and steady usage throughout', 'No strong pattern of high or low periods', 'Prefer not to rush early on'] },
+    { name: 'Front-loaded', sub: 'Slightly skew toward early usage', bullets: ['Plan to work more early, taper off later', 'Natural daily/weekly rhythm with productivity peaks', 'Most common for balanced workflows (default)'] },
+    { name: 'Aggressive', sub: 'Use most of your quota early', bullets: ['Heavy usage planned for today/early in the week', 'Need fast iteration on urgent work', "Know you'll have lighter usage later"] },
   ].forEach(function(p) {
     const col = document.createElement('div');
     col.className = 'pacing-card';

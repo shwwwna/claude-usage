@@ -1,8 +1,13 @@
 # Claude Usage Tracker
 
-Progressive web app that visualizes Claude API usage against time-based targets.
+Two products that share parsing/stats logic:
+
+- **PWA** (`/`) — paste usage text manually, visualize in browser
+- **Chrome Extension** (`/extension/`) — auto-scrapes `claude.ai/settings/usage`, shows popup window with badge
 
 ## Architecture
+
+### PWA
 
 - **parser.js** — Extract % used, reset times from Claude usage page text
 - **stats.js** — Calculate target % based on elapsed time, determine over/under/on-target status
@@ -11,13 +16,14 @@ Progressive web app that visualizes Claude API usage against time-based targets.
 - **styles.css** — Dark theme, responsive grid layout
 - **sw.js** — Service worker for offline PWA support
 
-## Input Format
+### Chrome Extension (`/extension/`)
 
-Text must contain:
-- Session: `74% used` + `Resets in 1 hr 30 min`
-- Weekly: `65% used` + `Resets Fri 5:59 AM`
-
-Parser is lenient with formatting (case-insensitive, flexible time formats).
+- **manifest.json** — MV3, permissions: storage/alarms/tabs/scripting/windows, host: claude.ai
+- **background.js** — Service worker: opens popup window on click, polls via alarms every 5 min, caches text, sets badge
+- **content.js** — Injected into claude.ai/settings/usage; polls DOM via MutationObserver, sends USAGE_TEXT message
+- **window.js** — Popup window logic; reads cache or triggers content script, calls parseUsageText/renderResults
+- **storage-adapter.js** — Wraps chrome.storage.local to match localStorage API
+- **src/parser.js, src/stats.js, src/renderer.js** — Extension copies of shared logic (not imported from root)
 
 ## When Modifying
 
@@ -26,5 +32,3 @@ Parser is lenient with formatting (case-insensitive, flexible time formats).
 - DOM/rendering → renderer.js
 - Styling → styles.css
 - Event wiring → app.js
-
-Keep files focused. Don't add comments unless behavior is non-obvious.
