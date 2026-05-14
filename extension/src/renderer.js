@@ -44,6 +44,8 @@ function updateFeasibilityRow() {
   const constrained = reachableAdditional < weeklyRemaining - 5;
 
   el.innerHTML = '';
+  const explainerClear = document.getElementById('weekly-feasibility-explainer');
+  if (explainerClear) explainerClear.textContent = '';
   if (!constrained) return;
 
   el.className = 'stat-row compact-meta-row';
@@ -63,6 +65,12 @@ function updateFeasibilityRow() {
   feasCell.appendChild(feasVal);
 
   el.appendChild(feasCell);
+
+  const explainerEl = document.getElementById('weekly-feasibility-explainer');
+  if (explainerEl) {
+    explainerEl.className = 'stat-explainer';
+    explainerEl.textContent = 'Total usage possible with remaining awake windows';
+  }
 }
 
 function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent, sessionData) {
@@ -72,10 +80,23 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent, ses
   card.className = 'card';
   card.dataset.type = label.toLowerCase();
 
+  const titleRow = document.createElement('div');
+  titleRow.className = 'card-title-row';
+
   const title = document.createElement('div');
   title.className = 'card-title';
   title.textContent = label;
-  card.appendChild(title);
+  titleRow.appendChild(title);
+
+  const chevron = document.createElement('span');
+  chevron.className = 'card-chevron';
+  chevron.textContent = '›';
+  titleRow.appendChild(chevron);
+
+  card.appendChild(titleRow);
+
+  const cardBody = document.createElement('div');
+  cardBody.className = 'card-body';
 
   const resetMs = Date.now() + hoursLeft * 3600 * 1000;
   const resetDate = new Date(resetMs);
@@ -113,9 +134,20 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent, ses
   resetCell.appendChild(resetLabel2);
   resetCell.appendChild(resetVal);
 
+  const timeLeft = document.createElement('div');
+  timeLeft.className = 'bar-legend-left';
+  const totalMin = Math.max(0, Math.round(hoursLeft * 60));
+  const d = Math.floor(totalMin / 1440);
+  const h = Math.floor((totalMin % 1440) / 60);
+  const m = totalMin % 60;
+  if (d > 0) timeLeft.textContent = d + 'd ' + h + 'h left';
+  else if (h > 0) timeLeft.textContent = h + 'h ' + m + 'm left';
+  else timeLeft.textContent = m + 'm left';
+  resetCell.appendChild(timeLeft);
+
   compactRow.appendChild(usageCell);
   compactRow.appendChild(resetCell);
-  card.appendChild(compactRow);
+  cardBody.appendChild(compactRow);
 
   if (label === 'Weekly') {
     const fullSessionsRemaining = Math.max(0, (100 - actualPct) * WEEKLY_WINDOW_HOURS / SESSION_WINDOW_HOURS / 100);
@@ -136,17 +168,20 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent, ses
     sessCell.appendChild(sessFrac);
 
     weeklyCompactRow.appendChild(sessCell);
-    card.appendChild(weeklyCompactRow);
+    cardBody.appendChild(weeklyCompactRow);
 
     const sessExplainer = document.createElement('div');
     sessExplainer.className = 'stat-explainer';
     sessExplainer.textContent = 'Full 5-hour sessions you can complete vs. total windows until reset';
-    card.appendChild(sessExplainer);
+    cardBody.appendChild(sessExplainer);
 
     if (sessionData) {
       const feasPlaceholder = document.createElement('div');
       feasPlaceholder.id = 'weekly-feasibility-row';
-      card.appendChild(feasPlaceholder);
+      cardBody.appendChild(feasPlaceholder);
+      const feasExplainerPlaceholder = document.createElement('div');
+      feasExplainerPlaceholder.id = 'weekly-feasibility-explainer';
+      cardBody.appendChild(feasExplainerPlaceholder);
     }
   }
 
@@ -169,7 +204,7 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent, ses
 
   statusRow.appendChild(lhs);
   statusRow.appendChild(rhs);
-  card.appendChild(statusRow);
+  cardBody.appendChild(statusRow);
 
   if (label === 'Session') {
     const remaining = 1 - actualPct / 100;
@@ -208,12 +243,12 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent, ses
     });
 
     msgsBlock.appendChild(msgsList);
-    card.appendChild(msgsBlock);
+    cardBody.appendChild(msgsBlock);
   }
 
-  card.appendChild(buildUnifiedBar(actualPct, targetPct, status));
+  cardBody.appendChild(buildUnifiedBar(actualPct, targetPct, status));
 
-  card.appendChild(buildLegend(totalHours, hoursLeft, exponent, actualPct));
+  cardBody.appendChild(buildLegend(totalHours, hoursLeft, exponent, actualPct));
 
   const pacingControl = document.createElement('div');
   pacingControl.className = 'flex items-center gap-3 text-muted3 mt-2';
@@ -280,7 +315,23 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent, ses
   pacingValueLabel.textContent = computeEarlierLabel(exponent);
   pacingControl.appendChild(pacingValueLabel);
 
-  card.appendChild(pacingControl);
+  cardBody.appendChild(pacingControl);
+
+  card.appendChild(cardBody);
+
+  const SHOW_CARD_KEY = 'claude-usage-show-' + label.toLowerCase();
+  const savedState = localStorage.getItem(SHOW_CARD_KEY);
+  const isExpanded = savedState !== '0';
+  cardBody.style.display = isExpanded ? '' : 'none';
+  if (isExpanded) chevron.classList.add('open');
+
+  titleRow.style.cursor = 'pointer';
+  titleRow.addEventListener('click', function() {
+    const nowExpanded = cardBody.style.display !== 'none';
+    cardBody.style.display = nowExpanded ? 'none' : '';
+    chevron.classList.toggle('open');
+    localStorage.setItem(SHOW_CARD_KEY, nowExpanded ? '0' : '1');
+  });
 
   return card;
 }
@@ -757,7 +808,17 @@ function build5hrWindows(hoursLeft, resetMs, sessionStartMs) {
 
       const range = document.createElement('span');
       range.className = 'windows-range';
-      range.textContent = fmtTime(w.start) + '–' + fmtTime(w.end);
+
+      const startSpan = document.createElement('span');
+      startSpan.className = 'windows-range-start';
+      startSpan.textContent = fmtTime(w.start);
+
+      const endSpan = document.createElement('span');
+      endSpan.className = 'windows-range-end';
+      endSpan.textContent = '–' + fmtTime(w.end);
+
+      range.appendChild(startSpan);
+      range.appendChild(endSpan);
 
       if (durationHours !== 5) {
         const durationSpan = document.createElement('span');
