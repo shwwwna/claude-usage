@@ -161,6 +161,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
+  document.getElementById('btn-focus-toggle').addEventListener('click', function() {
+    toggleFocusMode();
+  });
+
 
   document.getElementById('btn-practices-toggle').addEventListener('click', function() {
     const content = document.getElementById('practices-content');
@@ -192,6 +196,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const stored = localStorage.getItem(SHOW_SESSION_KEY);
   setSessionVisible(stored === '1');
   updateAlarmButtonLabel();
+  loadFocusMode();
 
   const pricingStored = localStorage.getItem(SHOW_PRICING_KEY);
   if (pricingStored === '1') {

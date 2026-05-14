@@ -1,6 +1,7 @@
 let sessionExponent = 0.8;
 let weeklyExponent  = 0.8;
 let lastParsed = null;
+let focusMode = false;
 
 function renderResults(parsed) {
   lastParsed = parsed;
@@ -123,6 +124,7 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent, ses
 
     const weeklyCompactRow = document.createElement('div');
     weeklyCompactRow.className = 'stat-row compact-meta-row';
+    weeklyCompactRow.id = 'weekly-sessions-left-row';
 
     const sessCell = document.createElement('span');
     sessCell.className = 'compact-meta-cell';
@@ -139,14 +141,20 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent, ses
     card.appendChild(weeklyCompactRow);
 
     const sessExplainer = document.createElement('div');
-    sessExplainer.className = 'stat-explainer';
+    sessExplainer.className = 'stat-explainer weekly-sessions-explainer';
     sessExplainer.textContent = 'Full 5-hour sessions you can complete vs. total windows until reset';
     card.appendChild(sessExplainer);
 
     if (sessionData) {
       const feasPlaceholder = document.createElement('div');
       feasPlaceholder.id = 'weekly-feasibility-row';
+      feasPlaceholder.className = 'weekly-reachable-row';
       card.appendChild(feasPlaceholder);
+
+      const feasExplainer = document.createElement('div');
+      feasExplainer.className = 'stat-explainer weekly-reachable-explainer';
+      feasExplainer.textContent = 'Total usage possible with remaining awake windows';
+      card.appendChild(feasExplainer);
     }
   }
 
@@ -381,10 +389,15 @@ function buildLegend(totalHours, hoursLeft, exponent, actualPct) {
     item.appendChild(pctEl);
 
     if (!isPast) {
-      const dateEl = document.createElement('div');
-      dateEl.className = 'bar-legend-date';
-      dateEl.textContent = fmtDateStr(hitDate);
-      item.appendChild(dateEl);
+      // In focus mode, hide date and left for all except 100%, and 100% always shown
+      const shouldHideDetails = focusMode && m !== 100;
+
+      if (!shouldHideDetails) {
+        const dateEl = document.createElement('div');
+        dateEl.className = 'bar-legend-date';
+        dateEl.textContent = fmtDateStr(hitDate);
+        item.appendChild(dateEl);
+      }
 
       const leftEl = document.createElement('div');
       leftEl.className = 'bar-legend-left';
@@ -400,7 +413,13 @@ function buildLegend(totalHours, hoursLeft, exponent, actualPct) {
       } else {
         leftEl.textContent = fmtLeft(hitMs - now);
       }
-      item.appendChild(leftEl);
+
+      if (!shouldHideDetails) {
+        item.appendChild(leftEl);
+      } else {
+        // For 100%, always show the "left" info
+        if (m === 100) item.appendChild(leftEl);
+      }
     }
 
     legend.appendChild(item);
@@ -703,6 +722,55 @@ function build5hrWindows(hoursLeft, resetMs, sessionStartMs) {
 
   container.appendChild(grid);
   return container;
+}
+
+function toggleFocusMode() {
+  focusMode = !focusMode;
+  localStorage.setItem('claude-usage-focus-mode', focusMode ? '1' : '0');
+
+  const btn = document.getElementById('btn-focus-toggle');
+  if (btn) btn.textContent = 'Focus: ' + (focusMode ? 'on' : 'off');
+
+  // Hide/show legend date and left for non-100% items
+  const legendItems = document.querySelectorAll('.bar-legend-item');
+  legendItems.forEach(function(item) {
+    const pctText = item.querySelector('.bar-legend-pct').textContent;
+    const pct = parseInt(pctText, 10);
+    const dateEl = item.querySelector('.bar-legend-date');
+    const leftEl = item.querySelector('.bar-legend-left');
+
+    // Hide date and left for all except 100% when focus mode is on
+    if (pct !== 100) {
+      if (dateEl) dateEl.style.display = focusMode ? 'none' : 'block';
+      if (leftEl) leftEl.style.display = focusMode ? 'none' : 'block';
+    }
+  });
+
+  // Hide/show weekly specific rows
+  const sessionsLeftRow = document.getElementById('weekly-sessions-left-row');
+  if (sessionsLeftRow) sessionsLeftRow.style.display = focusMode ? 'none' : 'flex';
+
+  const sessExplainers = document.querySelectorAll('.weekly-sessions-explainer');
+  sessExplainers.forEach(function(el) {
+    el.style.display = focusMode ? 'none' : 'block';
+  });
+
+  const reachableRows = document.querySelectorAll('.weekly-reachable-row');
+  reachableRows.forEach(function(el) {
+    el.style.display = focusMode ? 'none' : 'flex';
+  });
+
+  const reachableExplainers = document.querySelectorAll('.weekly-reachable-explainer');
+  reachableExplainers.forEach(function(el) {
+    el.style.display = focusMode ? 'none' : 'block';
+  });
+}
+
+function loadFocusMode() {
+  const saved = localStorage.getItem('claude-usage-focus-mode');
+  focusMode = saved === '1';
+  const btn = document.getElementById('btn-focus-toggle');
+  if (btn) btn.textContent = 'Focus: ' + (focusMode ? 'on' : 'off');
 }
 
 function fmt(n) { return n.toFixed(1); }

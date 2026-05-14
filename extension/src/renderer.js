@@ -1,6 +1,7 @@
 let sessionExponent = 0.8;
 let weeklyExponent  = 0.8;
 let lastParsed = null;
+let focusMode = false;
 
 function renderResults(parsed) {
   lastParsed = parsed;
@@ -155,6 +156,7 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent, ses
 
     const weeklyCompactRow = document.createElement('div');
     weeklyCompactRow.className = 'stat-row compact-meta-row';
+    weeklyCompactRow.id = 'weekly-sessions-left-row';
 
     const sessCell = document.createElement('span');
     sessCell.className = 'compact-meta-cell';
@@ -171,40 +173,21 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent, ses
     cardBody.appendChild(weeklyCompactRow);
 
     const sessExplainer = document.createElement('div');
-    sessExplainer.className = 'stat-explainer';
+    sessExplainer.className = 'stat-explainer weekly-sessions-explainer';
     sessExplainer.textContent = 'Full 5-hour sessions you can complete vs. total windows until reset';
     cardBody.appendChild(sessExplainer);
 
     if (sessionData) {
       const feasPlaceholder = document.createElement('div');
       feasPlaceholder.id = 'weekly-feasibility-row';
+      feasPlaceholder.className = 'weekly-reachable-row';
       cardBody.appendChild(feasPlaceholder);
-      const feasExplainerPlaceholder = document.createElement('div');
-      feasExplainerPlaceholder.id = 'weekly-feasibility-explainer';
-      cardBody.appendChild(feasExplainerPlaceholder);
+      const feasExplainer = document.createElement('div');
+      feasExplainer.className = 'stat-explainer weekly-reachable-explainer';
+      feasExplainer.textContent = 'Total usage possible with remaining awake windows';
+      cardBody.appendChild(feasExplainer);
     }
   }
-
-  const badgeClass = status === 'over' ? 'badge-over' : status === 'under' ? 'badge-under' : 'badge-on';
-  const badgeText  = status === 'over'  ? 'OVER, USE SLOWER'
-                   : status === 'under' ? 'UNDER, USE FASTER'
-                                        : 'ON TARGET, MAINTAIN THE PACE';
-  const diffClass  = status === 'over' ? 'diff-over' : status === 'under' ? 'diff-under' : 'diff-on';
-  const sign       = diff > 0 ? '+' : '';
-
-  const statusRow = document.createElement('div');
-  statusRow.className = 'stat-row';
-
-  const lhs = document.createElement('span');
-  lhs.innerHTML = '<span class="badge ' + badgeClass + '">' + badgeText + '</span>';
-
-  const rhs = document.createElement('span');
-  rhs.className = 'stat-value diff-value ' + diffClass;
-  rhs.textContent = sign + fmt(diff) + ' pp';
-
-  statusRow.appendChild(lhs);
-  statusRow.appendChild(rhs);
-  cardBody.appendChild(statusRow);
 
   if (label === 'Session') {
     const remaining = 1 - actualPct / 100;
@@ -245,6 +228,27 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent, ses
     msgsBlock.appendChild(msgsList);
     cardBody.appendChild(msgsBlock);
   }
+
+  const badgeClass = status === 'over' ? 'badge-over' : status === 'under' ? 'badge-under' : 'badge-on';
+  const badgeText  = status === 'over'  ? 'OVER, USE SLOWER'
+                   : status === 'under' ? 'UNDER, USE FASTER'
+                                        : 'ON TARGET, MAINTAIN THE PACE';
+  const diffClass  = status === 'over' ? 'diff-over' : status === 'under' ? 'diff-under' : 'diff-on';
+  const sign       = diff > 0 ? '+' : '';
+
+  const statusRow = document.createElement('div');
+  statusRow.className = 'stat-row';
+
+  const lhs = document.createElement('span');
+  lhs.innerHTML = '<span class="badge ' + badgeClass + '">' + badgeText + '</span>';
+
+  const rhs = document.createElement('span');
+  rhs.className = 'stat-value diff-value ' + diffClass;
+  rhs.textContent = sign + fmt(diff) + ' pp';
+
+  statusRow.appendChild(lhs);
+  statusRow.appendChild(rhs);
+  cardBody.appendChild(statusRow);
 
   cardBody.appendChild(buildUnifiedBar(actualPct, targetPct, status));
 
@@ -307,6 +311,7 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent, ses
     if (lastParsed) {
       renderResults(lastParsed);
       updateWindowTitle(lastParsed);
+      if (focusMode) applyFocusModeStyles();
     }
   });
   pacingControl.appendChild(pacingSlider);
@@ -464,26 +469,24 @@ function buildLegend(totalHours, hoursLeft, exponent, actualPct) {
     item.appendChild(pctEl);
 
     if (!isPast) {
-      const dateEl = document.createElement('div');
-      dateEl.className = 'bar-legend-date';
-      dateEl.textContent = fmtDateStr(hitDate);
-      item.appendChild(dateEl);
+      // In focus mode, hide date and left for all except 100%
+      const shouldHideDetails = focusMode && m !== 100;
 
-      const leftEl = document.createElement('div');
-      leftEl.className = 'bar-legend-left';
-      if (m === 100) {
-        const diffMs = resetMs - hitMs;
-        const totalMin = Math.max(0, Math.round(diffMs / 60000));
-        const d = Math.floor(totalMin / 1440);
-        const h = Math.floor((totalMin % 1440) / 60);
-        const min = totalMin % 60;
-        if (d > 0) leftEl.textContent = d + 'd ' + h + 'h earlier than reset';
-        else if (h > 0) leftEl.textContent = h + 'h ' + min + 'm earlier than reset';
-        else leftEl.textContent = min + 'm earlier than reset';
-      } else {
-        leftEl.textContent = fmtLeft(hitMs - now);
+      if (!shouldHideDetails) {
+        const dateEl = document.createElement('div');
+        dateEl.className = 'bar-legend-date';
+        dateEl.textContent = fmtDateStr(hitDate);
+        item.appendChild(dateEl);
       }
-      item.appendChild(leftEl);
+
+      if (m !== 100) {
+        const leftEl = document.createElement('div');
+        leftEl.className = 'bar-legend-left';
+        leftEl.textContent = fmtLeft(hitMs - now);
+        if (!shouldHideDetails) {
+          item.appendChild(leftEl);
+        }
+      }
     }
 
     legend.appendChild(item);
@@ -921,6 +924,7 @@ function renderSuggestion(parsed) {
       if (s.key === 'session-exponent') sessionExponent = suggested;
       else weeklyExponent = suggested;
       document.getElementById(s.key + '-label').textContent = exponentToLabel(suggested);
+      if (lastParsed) updateWindowTitle(lastParsed);
       run();
     });
 
@@ -1147,4 +1151,60 @@ function buildHistoryButtons() {
   row.appendChild(importBtn);
   row.appendChild(clearBtn);
   return row;
+}
+
+function applyFocusModeStyles() {
+  // Hide/show all stat explainers
+  const allExplainers = document.querySelectorAll('.stat-explainer');
+  allExplainers.forEach(function(el) {
+    el.style.display = focusMode ? 'none' : 'block';
+  });
+
+  // Hide/show legend date and left for non-100% items
+  const legendItems = document.querySelectorAll('.bar-legend-item');
+  legendItems.forEach(function(item) {
+    const pctText = item.querySelector('.bar-legend-pct').textContent;
+    const pct = parseInt(pctText, 10);
+    const dateEl = item.querySelector('.bar-legend-date');
+    const leftEl = item.querySelector('.bar-legend-left');
+
+    // Hide date and left for all except 100% when focus mode is on
+    if (pct !== 100) {
+      if (dateEl) dateEl.style.display = focusMode ? 'none' : 'block';
+      if (leftEl) leftEl.style.display = focusMode ? 'none' : 'block';
+    }
+  });
+
+  // Hide/show weekly specific rows
+  const sessionsLeftRow = document.getElementById('weekly-sessions-left-row');
+  if (sessionsLeftRow) sessionsLeftRow.style.display = focusMode ? 'none' : 'flex';
+
+  const reachableRows = document.querySelectorAll('.weekly-reachable-row');
+  reachableRows.forEach(function(el) {
+    el.style.display = focusMode ? 'none' : 'flex';
+  });
+
+  const feasibilityRow = document.getElementById('weekly-feasibility-row');
+  if (feasibilityRow) feasibilityRow.style.display = focusMode ? 'none' : 'flex';
+}
+
+function toggleFocusMode() {
+  focusMode = !focusMode;
+  localStorage.setItem('claude-usage-focus-mode', focusMode ? '1' : '0');
+
+  const btn = document.getElementById('btn-focus-toggle');
+  if (btn) btn.textContent = 'Focus: ' + (focusMode ? 'on' : 'off');
+
+  // Toggle focus mode class for CSS changes
+  document.documentElement.classList.toggle('focus-mode', focusMode);
+
+  applyFocusModeStyles();
+}
+
+function loadFocusMode() {
+  const saved = localStorage.getItem('claude-usage-focus-mode');
+  focusMode = saved === '1';
+  const btn = document.getElementById('btn-focus-toggle');
+  if (btn) btn.textContent = 'Focus: ' + (focusMode ? 'on' : 'off');
+  document.documentElement.classList.toggle('focus-mode', focusMode);
 }
