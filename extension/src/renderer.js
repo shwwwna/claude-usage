@@ -217,7 +217,7 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent, ses
     const msgsBlock = document.createElement('div');
     msgsBlock.className = 'msgs-estimate-block';
 
-    const msgsHeading = document.createElement('div');
+    const msgsHeading = document.createElement('span');
     msgsHeading.className = 'stat-label';
     msgsHeading.textContent = 'Est. msgs left';
     msgsBlock.appendChild(msgsHeading);
@@ -304,7 +304,10 @@ function buildCard(label, actualPct, stats, totalHours, hoursLeft, exponent, ses
     }
     const labelEl = document.getElementById(label === 'Session' ? 'session-exponent-label' : 'weekly-exponent-label');
     if (labelEl) labelEl.textContent = computeEarlierLabel(v);
-    if (lastParsed) renderResults(lastParsed);
+    if (lastParsed) {
+      renderResults(lastParsed);
+      updateWindowTitle(lastParsed);
+    }
   });
   pacingControl.appendChild(pacingSlider);
 
@@ -453,6 +456,7 @@ function buildLegend(totalHours, hoursLeft, exponent, actualPct) {
 
     const item = document.createElement('div');
     item.className = 'bar-legend-item' + (isPast ? ' legend-past' : '');
+    item.style.left = m + '%';
 
     const pctEl = document.createElement('div');
     pctEl.className = 'bar-legend-pct';
@@ -484,6 +488,7 @@ function buildLegend(totalHours, hoursLeft, exponent, actualPct) {
 
     legend.appendChild(item);
   });
+
 
   return legend;
 }

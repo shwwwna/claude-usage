@@ -11,7 +11,7 @@ let originalFavicon = null;
 let modalEl = null;
 let activeNotification = null;
 let escHandler = null;
-let _alarmEnabled = false;
+let _alarmEnabled = true;
 
 const FLASH_FAVICON = 'data:image/svg+xml;utf8,' + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="#e14b4b"/></svg>'
@@ -35,9 +35,10 @@ function setAlarmEnabled(enabled) {
 async function loadAlarmState() {
   try {
     const result = await chrome.storage.local.get('claude-usage-alarm-enabled');
-    _alarmEnabled = result['claude-usage-alarm-enabled'] === '1';
+    const val = result['claude-usage-alarm-enabled'];
+    _alarmEnabled = val === undefined ? true : val === '1';
   } catch (e) {
-    _alarmEnabled = false;
+    _alarmEnabled = true;
   }
 }
 

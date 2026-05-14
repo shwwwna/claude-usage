@@ -30,8 +30,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       setAlarmEnabled(newState);
       updateAlarmButtonLabel();
     });
-    document.getElementById('btn-refresh').addEventListener('click', () => {
-      chrome.scripting.executeScript({ target: { tabId: usageTab.id }, files: ['content.js'] });
+    document.getElementById('btn-refresh').addEventListener('click', async () => {
+      await chrome.tabs.update(usageTab.id, { url: 'https://claude.ai/settings/usage' });
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      await chrome.scripting.executeScript({ target: { tabId: usageTab.id }, files: ['content.js'] });
+    });
+    document.getElementById('btn-open-usage').addEventListener('click', async () => {
+      try {
+        await chrome.tabs.update(usageTab.id, { active: true });
+      } catch {
+        // Tab was closed, create a new one
+        const newTab = await chrome.tabs.create({ url: 'https://claude.ai/settings/usage' });
+        usageTab = newTab;
+        await chrome.scripting.executeScript({ target: { tabId: usageTab.id }, files: ['content.js'] });
+      }
     });
 
     await chrome.scripting.executeScript({ target: { tabId: usageTab.id }, files: ['content.js'] });
