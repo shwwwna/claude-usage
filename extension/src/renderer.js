@@ -469,24 +469,15 @@ function buildLegend(totalHours, hoursLeft, exponent, actualPct) {
     item.appendChild(pctEl);
 
     if (!isPast) {
-      // In focus mode, hide date and left for all except 100%
-      const shouldHideDetails = focusMode && m !== 100;
+      const dateEl = document.createElement('div');
+      dateEl.className = 'bar-legend-date';
+      dateEl.textContent = fmtDateStr(hitDate);
+      item.appendChild(dateEl);
 
-      if (!shouldHideDetails) {
-        const dateEl = document.createElement('div');
-        dateEl.className = 'bar-legend-date';
-        dateEl.textContent = fmtDateStr(hitDate);
-        item.appendChild(dateEl);
-      }
-
-      if (m !== 100) {
-        const leftEl = document.createElement('div');
-        leftEl.className = 'bar-legend-left';
-        leftEl.textContent = fmtLeft(hitMs - now);
-        if (!shouldHideDetails) {
-          item.appendChild(leftEl);
-        }
-      }
+      const leftEl = document.createElement('div');
+      leftEl.className = 'bar-legend-left';
+      leftEl.textContent = fmtLeft(hitMs - now);
+      item.appendChild(leftEl);
     }
 
     legend.appendChild(item);

@@ -128,9 +128,13 @@ function processText(text) {
 }
 
 function showLastUpdated(timestamp) {
-  const now = Date.now();
-  const elapsed = Math.round((now - timestamp) / 60000);
-  const timeStr = elapsed === 0 ? "just now" : elapsed + " min ago";
+  const date = new Date(timestamp);
+  const h = date.getHours();
+  const m = date.getMinutes();
+  const ampm = h >= 12 ? 'pm' : 'am';
+  const h12 = h % 12 || 12;
+  const mm = m < 10 ? '0' + m : m;
+  const timeStr = h12 + ':' + mm + ampm;
   document.getElementById("last-updated").textContent =
     "Last updated: " + timeStr;
 }
