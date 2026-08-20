@@ -3,8 +3,8 @@ function parseUsageText(raw) {
   const weeklyErrors  = [];
 
   // Extract percentages tied to their sections using section headers as anchors
-  const sessionMatch = raw.match(/current\s+session[\s\S]*?(\d{1,3})%/i);
-  const weeklyMatch = raw.match(/weekly\s+limits?[\s\S]*?(\d{1,3})%/i);
+  const sessionMatch = raw.match(/current\s+session[\s\S]*?(\d{1,3})%\s+used/i);
+  const weeklyMatch = raw.match(/weekly\s+limits?[\s\S]*?(\d{1,3})%\s+used/i);
 
   const sessionActualPct = sessionMatch ? parseFloat(sessionMatch[1]) : null;
   const weeklyActualPct  = weeklyMatch ? parseFloat(weeklyMatch[1]) : null;
