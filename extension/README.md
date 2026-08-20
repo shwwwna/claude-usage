@@ -12,40 +12,35 @@ A Chrome extension that automatically reads your Claude usage data from `https:/
 
 ## Usage
 
-1. Open `https://claude.ai/settings/usage` in a Chrome tab
-2. Click the extension icon in your toolbar
+1. Open `https://claude.ai/settings/usage` in a Chrome tab (or let the extension open it for you)
+2. Click the extension icon in your toolbar to open the popup window
 3. The popup shows your session and weekly usage with targets and status
 
-**Auto-refresh (Phase 2):** The extension polls the usage page every 5 minutes and caches results. The popup loads instantly from cache.
-
-## Features
-
-- **Phase 1 (MVP):** Manual refresh from popup. Shows cached data when tab is closed.
-- **Phase 2:** Auto-refresh every 5 minutes via service worker. Badge shows session % at a glance.
-- **Phase 3:** Validated DOM scraping, full styling, production-ready.
+The extension polls the usage page every 5 minutes via a background alarm and caches the results, so the popup loads instantly from cache. The toolbar badge shows session usage % at a glance.
 
 ## How it works
 
-1. Content script (`content.js`) injects into the usage page
-2. Extracts usage text from the DOM (hydration-safe with MutationObserver)
-3. Sends text to popup via `chrome.runtime.sendMessage`
-4. Popup runs the same parser/stats/renderer pipeline as the PWA
-5. Background service worker caches data and updates badge every 5 minutes
+1. Clicking the extension icon opens a popup window (`window.html`)
+2. The content script (`content.js`) is injected into the usage page and extracts usage text from the DOM (hydration-safe via `MutationObserver`)
+3. Usage text is sent to the background service worker via `chrome.runtime.sendMessage`
+4. The popup window reads cached data (or triggers a fresh scrape) and runs it through the parser/stats/renderer pipeline
+5. The background service worker (`background.js`) caches data and updates the badge every 5 minutes
 
 ## Architecture
 
 ```
 extension/
 ├── manifest.json          # MV3 manifest
-├── popup.html             # Popup UI
-├── popup.js               # Popup logic, entry point
-├── content.js             # DOM scraper, injected into usage page
-├── background.js          # Service worker, auto-refresh + badge
-├── storage-adapter.js     # Chrome storage wrapper
+├── window.html             # Popup window UI
+├── window.js                # Popup window logic, entry point
+├── window.css                # Popup window styling
+├── content.js               # DOM scraper, injected into usage page
+├── background.js            # Service worker, auto-refresh + badge
+├── storage-adapter.js        # Chrome storage wrapper
 ├── src/
-│   ├── parser.js          # Parse usage text (copied from PWA)
-│   ├── stats.js           # Calculate targets (copied from PWA)
-│   └── tailwindcss.min.js # Styling
+│   ├── parser.js           # Parse usage text
+│   ├── stats.js            # Calculate targets
+│   └── renderer.js         # Render results into the popup DOM
 ├── icons/
 │   ├── icon-16.png
 │   ├── icon-48.png
@@ -60,10 +55,11 @@ extension/
 - `alarms` — Periodic auto-refresh every 5 minutes
 - `tabs` — Find the open usage tab
 - `scripting` — Inject content script
+- `windows` — Open the popup as its own window
 
 ## Debugging
 
-Open DevTools in the extension popup (`Inspect popup`) or the background service worker (`Service workers` section in `chrome://extensions/`).
+Open DevTools in the popup window (`Inspect`) or the background service worker (`Service workers` section in `chrome://extensions/`).
 
 Content script errors appear in the DevTools console of the usage page tab.
 
